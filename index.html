@@ -1,1014 +1,919 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>AI面试模拟器 | 腾讯青科实训营</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <style>
-        :root {
-            --primary: #0066CC;
-            --primary-light: #3388DD;
-            --primary-glow: rgba(0,102,204,0.3);
-            --green: #10b981;
-            --bg: #0a0e1a;
-            --card-bg: rgba(18,24,40,0.85);
-            --chat-bg: rgba(12,16,28,0.9);
-            --text: #e2e8f0;
-            --text-dim: #8892b0;
-            --border: rgba(255,255,255,0.08);
-            --shadow: 0 8px 40px rgba(0,0,0,0.4);
-        }
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            background: var(--bg);
-            font-family: 'Segoe UI', 'PingFang SC', Roboto, sans-serif;
-            min-height: 100vh;
-            overflow-x: hidden;
-            color: var(--text);
-        }
-        /* 粒子背景 */
-        #particles {
-            position: fixed;
-            inset: 0;
-            pointer-events: none;
-            z-index: 0;
-        }
-        .particle {
-            position: absolute;
-            border-radius: 50%;
-            background: var(--primary);
-            animation: floatUp linear infinite;
-            opacity: 0;
-        }
-        @keyframes floatUp {
-            0% { transform: translateY(0) scale(1); opacity: 0; }
-            10% { opacity: 0.6; }
-            90% { opacity: 0.3; }
-            100% { transform: translateY(-100vh) scale(0.3); opacity: 0; }
-        }
-        /* 渐变光晕 */
-        .glow-orb {
-            position: fixed;
-            border-radius: 50%;
-            filter: blur(120px);
-            pointer-events: none;
-            z-index: 0;
-            animation: orbDrift 20s ease-in-out infinite;
-        }
-        .glow-orb.top-right {
-            width: 400px; height: 400px;
-            background: rgba(0,102,204,0.12);
-            top: -100px; right: -100px;
-        }
-        .glow-orb.bottom-left {
-            width: 350px; height: 350px;
-            background: rgba(16,185,129,0.08);
-            bottom: -80px; left: -80px;
-            animation-delay: -10s;
-        }
-        @keyframes orbDrift {
-            0%, 100% { transform: translate(0,0) scale(1); }
-            33% { transform: translate(30px,-20px) scale(1.1); }
-            66% { transform: translate(-20px,15px) scale(0.95); }
-        }
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-            position: relative;
-            z-index: 1;
-        }
-        /* 卡片 */
-        .card {
-            background: var(--card-bg);
-            backdrop-filter: blur(24px);
-            -webkit-backdrop-filter: blur(24px);
-            border-radius: 24px;
-            box-shadow: var(--shadow);
-            padding: 28px 24px;
-            margin-bottom: 20px;
-            border: 1px solid var(--border);
-            transition: transform 0.3s, box-shadow 0.3s;
-            position: relative;
-            overflow: hidden;
-        }
-        .card::before {
-            content: '';
-            position: absolute;
-            inset: 0;
-            border-radius: 24px;
-            padding: 1px;
-            background: linear-gradient(135deg, rgba(0,102,204,0.3), transparent 40%, transparent 60%, rgba(16,185,129,0.2));
-            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-            -webkit-mask-composite: xor;
-            mask-composite: exclude;
-            pointer-events: none;
-        }
-        .card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 12px 50px rgba(0,0,0,0.5);
-        }
-        .header { text-align: center; }
-        .header h1 {
-            font-size: 2rem;
-            background: linear-gradient(135deg, #4da6ff, #00d4aa);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            letter-spacing: -0.5px;
-        }
-        .header .subtitle {
-            font-size: 0.85rem;
-            color: var(--text-dim);
-            margin-top: 6px;
-        }
-        .badge {
-            display: inline-block;
-            background: rgba(0,102,204,0.15);
-            border: 1px solid rgba(0,102,204,0.3);
-            color: #4da6ff;
-            padding: 5px 16px;
-            border-radius: 40px;
-            font-size: 0.8rem;
-            font-weight: 500;
-            margin-top: 10px;
-            animation: badgePulse 2s ease-in-out infinite;
-        }
-        @keyframes badgePulse {
-            0%, 100% { box-shadow: 0 0 0 0 rgba(0,102,204,0.4); }
-            50% { box-shadow: 0 0 0 8px rgba(0,102,204,0); }
-        }
-        /* 岗位选择 */
-        .job-selector {
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-            justify-content: center;
-            margin: 16px 0 8px;
-        }
-        .job-btn {
-            background: rgba(255,255,255,0.04);
-            border: 1px solid var(--border);
-            padding: 12px 22px;
-            border-radius: 16px;
-            font-size: 0.95rem;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.3s;
-            color: var(--text);
-            position: relative;
-            overflow: hidden;
-        }
-        .job-btn::after {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background: radial-gradient(circle at center, var(--primary-glow), transparent);
-            opacity: 0;
-            transition: opacity 0.3s;
-        }
-        .job-btn:hover { border-color: rgba(0,102,204,0.4); transform: translateY(-2px); }
-        .job-btn:hover::after { opacity: 1; }
-        .job-btn.active {
-            background: linear-gradient(135deg, var(--primary), #0052a3);
-            border-color: transparent;
-            color: #fff;
-            box-shadow: 0 0 20px var(--primary-glow);
-            transform: scale(1.03);
-        }
-        /* 面试间 */
-        .interview-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 8px;
-        }
-        .interview-header span { font-weight: 600; font-size: 1rem; }
-        .progress-wrap {
-            display: flex;
-            gap: 6px;
-            align-items: center;
-        }
-        .progress-step {
-            width: 32px; height: 32px;
-            border-radius: 50%;
-            border: 2px solid var(--border);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.75rem;
-            font-weight: 700;
-            color: var(--text-dim);
-            transition: all 0.4s;
-            position: relative;
-        }
-        .progress-step.done {
-            border-color: var(--green);
-            background: rgba(16,185,129,0.15);
-            color: var(--green);
-        }
-        .progress-step.current {
-            border-color: var(--primary);
-            background: rgba(0,102,204,0.2);
-            color: #4da6ff;
-            animation: stepPulse 1.5s ease-in-out infinite;
-        }
-        @keyframes stepPulse {
-            0%, 100% { box-shadow: 0 0 0 0 var(--primary-glow); }
-            50% { box-shadow: 0 0 0 10px transparent; }
-        }
-        .progress-line {
-            width: 24px; height: 2px;
-            background: var(--border);
-            border-radius: 1px;
-            transition: background 0.4s;
-        }
-        .progress-line.done { background: var(--green); }
-        /* 聊天区域 */
-        .chat-area {
-            background: var(--chat-bg);
-            border-radius: 20px;
-            padding: 20px;
-            min-height: 300px;
-            max-height: 440px;
-            overflow-y: auto;
-            margin: 16px 0;
-            display: flex;
-            flex-direction: column;
-            gap: 14px;
-            scroll-behavior: smooth;
-        }
-        .chat-area::-webkit-scrollbar { width: 4px; }
-        .chat-area::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 2px; }
-        .message {
-            display: flex;
-            flex-direction: column;
-            max-width: 85%;
-            animation: msgSlideIn 0.4s cubic-bezier(.34,1.56,.64,1);
-        }
-        .message.ai { align-items: flex-start; }
-        .message.user { align-items: flex-end; align-self: flex-end; animation-name: msgSlideInRight; }
-        @keyframes msgSlideIn {
-            from { opacity: 0; transform: translateX(-20px) scale(0.95); }
-            to { opacity: 1; transform: translateX(0) scale(1); }
-        }
-        @keyframes msgSlideInRight {
-            from { opacity: 0; transform: translateX(20px) scale(0.95); }
-            to { opacity: 1; transform: translateX(0) scale(1); }
-        }
-        .bubble {
-            padding: 12px 18px;
-            border-radius: 20px;
-            font-size: 0.93rem;
-            line-height: 1.55;
-            word-break: break-word;
-        }
-        .ai .bubble {
-            background: rgba(30,41,59,0.8);
-            border: 1px solid rgba(255,255,255,0.06);
-            border-bottom-left-radius: 4px;
-            color: #e2e8f0;
-        }
-        .user .bubble {
-            background: linear-gradient(135deg, var(--primary), #0052cc);
-            color: #fff;
-            border-bottom-right-radius: 4px;
-        }
-        .feedback {
-            font-size: 0.72rem;
-            margin-top: 6px;
-            color: #64748b;
-            padding-left: 12px;
-            animation: fadeIn 0.5s 0.3s both;
-        }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(4px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        /* 打字光标 */
-        .typing-cursor::after {
-            content: '▊';
-            animation: blink 0.8s step-end infinite;
-            color: #4da6ff;
-        }
-        @keyframes blink {
-            50% { opacity: 0; }
-        }
-        /* 思考动画 */
-        .thinking {
-            display: flex;
-            gap: 5px;
-            padding: 14px 18px;
-            background: rgba(30,41,59,0.6);
-            border-radius: 20px;
-            border-bottom-left-radius: 4px;
-            align-self: flex-start;
-        }
-        .thinking .dot {
-            width: 8px; height: 8px;
-            border-radius: 50%;
-            background: #4da6ff;
-            animation: dotBounce 1.2s ease-in-out infinite;
-        }
-        .thinking .dot:nth-child(2) { animation-delay: 0.2s; }
-        .thinking .dot:nth-child(3) { animation-delay: 0.4s; }
-        @keyframes dotBounce {
-            0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
-            30% { transform: translateY(-8px); opacity: 1; }
-        }
-        /* 输入区 */
-        .input-group {
-            display: flex;
-            gap: 10px;
-        }
-        #answerInput {
-            flex: 1;
-            padding: 12px 18px;
-            background: rgba(255,255,255,0.04);
-            border: 1px solid var(--border);
-            border-radius: 14px;
-            font-size: 0.93rem;
-            outline: none;
-            font-family: inherit;
-            color: var(--text);
-            transition: all 0.3s;
-        }
-        #answerInput::placeholder { color: #475569; }
-        #answerInput:focus {
-            border-color: var(--primary);
-            box-shadow: 0 0 0 3px var(--primary-glow);
-            background: rgba(255,255,255,0.06);
-        }
-        #answerInput:disabled { opacity: 0.4; }
-        button {
-            background: linear-gradient(135deg, var(--primary), #0052cc);
-            color: #fff;
-            border: none;
-            padding: 12px 24px;
-            border-radius: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.25s;
-            font-size: 0.9rem;
-            font-family: inherit;
-            position: relative;
-            overflow: hidden;
-        }
-        button::after {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background: linear-gradient(135deg, transparent, rgba(255,255,255,0.1));
-            opacity: 0;
-            transition: opacity 0.3s;
-        }
-        button:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 4px 20px var(--primary-glow); }
-        button:hover:not(:disabled)::after { opacity: 1; }
-        button:active:not(:disabled) { transform: scale(0.96); }
-        button:disabled { background: #334155; color: #64748b; cursor: not-allowed; box-shadow: none; }
-        .btn-green { background: linear-gradient(135deg, var(--green), #059669) !important; }
-        .btn-ghost {
-            background: rgba(255,255,255,0.04) !important;
-            border: 1px solid var(--border);
-            color: var(--text-dim) !important;
-        }
-        .btn-ghost:hover { border-color: rgba(255,255,255,0.2); color: var(--text) !important; }
-        .start-btn {
-            text-align: center;
-            margin-top: 14px;
-        }
-        .start-btn button {
-            padding: 12px 40px;
-            font-size: 1rem;
-            animation: btnGlow 2s ease-in-out infinite;
-        }
-        @keyframes btnGlow {
-            0%, 100% { box-shadow: 0 0 15px rgba(16,185,129,0.3); }
-            50% { box-shadow: 0 0 30px rgba(16,185,129,0.6); }
-        }
-        /* 报告卡片 */
-        .score-display {
-            text-align: center;
-            padding: 20px 0;
-        }
-        .score-circle {
-            width: 140px; height: 140px;
-            border-radius: 50%;
-            margin: 0 auto 16px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 2.6rem;
-            font-weight: 800;
-            position: relative;
-        }
-        .score-circle::before {
-            content: '';
-            position: absolute;
-            inset: -6px;
-            border-radius: 50%;
-            padding: 6px;
-            background: conic-gradient(var(--primary), var(--green), #a78bfa, var(--primary));
-            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-            -webkit-mask-composite: xor;
-            mask-composite: exclude;
-            animation: rotateGradient 4s linear infinite;
-        }
-        @keyframes rotateGradient {
-            to { transform: rotate(360deg); }
-        }
-        .score-label {
-            font-size: 0.85rem;
-            color: var(--text-dim);
-        }
-        .score-radar {
-            max-width: 300px;
-            margin: 16px auto;
-        }
-        .dimension-rows {
-            background: rgba(255,255,255,0.03);
-            border-radius: 16px;
-            padding: 16px;
-        }
-        .dim-row {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            margin-bottom: 10px;
-        }
-        .dim-row:last-child { margin-bottom: 0; }
-        .dim-icon { font-size: 1.2rem; width: 28px; text-align: center; }
-        .dim-name { font-size: 0.85rem; color: var(--text-dim); width: 70px; }
-        .dim-bar {
-            flex: 1;
-            height: 8px;
-            background: rgba(255,255,255,0.05);
-            border-radius: 4px;
-            overflow: hidden;
-        }
-        .dim-fill {
-            height: 100%;
-            border-radius: 4px;
-            transition: width 1.5s cubic-bezier(.22,.61,.36,1);
-            width: 0;
-        }
-        .dim-fill.logic { background: linear-gradient(90deg, #4da6ff, #0066CC); }
-        .dim-fill.profession { background: linear-gradient(90deg, #34d399, #10b981); }
-        .dim-fill.adaptability { background: linear-gradient(90deg, #a78bfa, #7c3aed); }
-        .dim-fill.communication { background: linear-gradient(90deg, #fbbf24, #f59e0b); }
-        .dim-val { font-size: 0.85rem; font-weight: 700; width: 36px; text-align: right; }
-        .action-row {
-            display: flex;
-            gap: 10px;
-            justify-content: center;
-            margin-top: 20px;
-        }
-        /* 撒花 */
-        .confetti-piece {
-            position: fixed;
-            z-index: 9999;
-            pointer-events: none;
-            animation: confettiFall linear forwards;
-        }
-        @keyframes confettiFall {
-            0% { transform: translateY(0) rotate(0deg) scale(1); opacity: 1; }
-            80% { opacity: 1; }
-            100% { transform: translateY(105vh) rotate(720deg) scale(0.3); opacity: 0; }
-        }
-        /* Toast */
-        .toast {
-            position: fixed;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(16,185,129,0.95);
-            color: #fff;
-            padding: 10px 24px;
-            border-radius: 40px;
-            font-size: 0.85rem;
-            font-weight: 600;
-            z-index: 999;
-            animation: toastIn 0.4s cubic-bezier(.34,1.56,.64,1), toastOut 0.3s 1.8s ease forwards;
-        }
-        @keyframes toastIn {
-            from { opacity: 0; transform: translateX(-50%) translateY(-20px); }
-            to { opacity: 1; transform: translateX(-50%) translateY(0); }
-        }
-        @keyframes toastOut {
-            to { opacity: 0; transform: translateX(-50%) translateY(-10px); }
-        }
-        footer {
-            text-align: center;
-            font-size: 0.7rem;
-            color: #334155;
-            padding: 10px 0 20px;
-            position: relative;
-            z-index: 1;
-        }
-        @media (max-width: 550px) {
-            .card { padding: 20px 16px; }
-            .bubble { font-size: 0.85rem; }
-            .header h1 { font-size: 1.5rem; }
-            .score-circle { width: 110px; height: 110px; font-size: 2rem; }
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>AI面试模拟器 | 腾讯青科实训营</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<style>
+  :root {
+    --bg: #05070a;
+    --card: rgba(12,18,32,0.9);
+    --primary: #00d4aa;
+    --primary-glow: rgba(0,212,170,0.35);
+    --accent: #00a8ff;
+    --accent-glow: rgba(0,168,255,0.35);
+    --gold: #ffd700;
+    --gold-glow: rgba(255,215,0,0.4);
+    --text: #e8ecf1;
+    --text-dim: #6b7a8f;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    width: 100%; height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'PingFang SC','Microsoft YaHei','Segoe UI',sans-serif;
+    overflow-x: hidden;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* ========== 全屏开场 ========== */
+  #introScreen {
+    position: fixed; inset: 0; z-index: 200;
+    background: var(--bg);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: 40px 24px;
+    transition: opacity 1s, transform 1s;
+  }
+  #introScreen.done { opacity: 0; pointer-events: none; transform: scale(1.05); }
+  .intro-year {
+    font-size: 3.2rem; font-weight: 800;
+    background: linear-gradient(135deg, var(--primary), var(--accent));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+    letter-spacing: 4px; margin-bottom: 6px;
+  }
+  .intro-line {
+    font-size: 1.05rem; color: var(--text-dim);
+    line-height: 2.2; text-align: center;
+    max-width: 520px; min-height: 2.2em;
+  }
+  .intro-line .cursor {
+    display: inline-block; width: 2px; height: 1.1em;
+    background: var(--primary); vertical-align: middle;
+    animation: blink 0.8s step-end infinite; margin-left: 2px;
+  }
+  @keyframes blink { 50% { opacity: 0; } }
+  .intro-btn {
+    margin-top: 36px; padding: 14px 48px;
+    border: 1px solid var(--primary);
+    background: transparent; color: var(--primary);
+    border-radius: 40px; font-size: 1rem; font-weight: 600;
+    cursor: pointer; letter-spacing: 4px;
+    transition: all 0.4s; opacity: 0; transform: translateY(20px);
+  }
+  .intro-btn.show { opacity: 1; transform: translateY(0); }
+  .intro-btn:hover {
+    background: var(--primary); color: var(--bg);
+    box-shadow: 0 0 30px var(--primary-glow);
+  }
+  /* 开场粒子雨 */
+  .rain {
+    position: fixed; inset: 0; z-index: 0;
+    pointer-events: none; overflow: hidden;
+  }
+  .rain-drop {
+    position: absolute; width: 1px;
+    background: linear-gradient(to bottom, transparent, rgba(0,212,170,0.15), transparent);
+    animation: rainFall linear infinite;
+  }
+  @keyframes rainFall {
+    from { transform: translateY(-100%); }
+    to { transform: translateY(100vh); }
+  }
+
+  /* ========== 主容器 ========== */
+  .wrap {
+    max-width: 680px; margin: 0 auto;
+    padding: 20px 16px 40px;
+    position: relative; z-index: 2;
+    display: none;
+  }
+  .wrap.show { display: block; animation: fadeInUp 0.8s ease; }
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(30px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* 顶部标题栏 */
+  .topbar {
+    text-align: center; padding: 16px 0 24px;
+  }
+  .topbar h1 {
+    font-size: 1.6rem; font-weight: 700; letter-spacing: 2px;
+    background: linear-gradient(90deg, var(--primary), var(--accent));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .topbar .sub {
+    font-size: 0.78rem; color: var(--text-dim); margin-top: 6px; letter-spacing: 1px;
+  }
+  .chapter-tag {
+    display: inline-block; border: 1px solid rgba(0,212,170,0.3);
+    color: var(--primary); font-size: 0.7rem; padding: 3px 12px;
+    border-radius: 20px; margin-bottom: 10px; letter-spacing: 2px;
+  }
+
+  /* ========== 场景卡片 ========== */
+  .scene {
+    background: var(--card);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 20px;
+    padding: 24px 20px;
+    margin-bottom: 16px;
+    position: relative; overflow: hidden;
+    backdrop-filter: blur(20px);
+    transition: transform 0.3s, box-shadow 0.3s;
+  }
+  .scene::before {
+    content: ''; position: absolute; inset: 0;
+    border-radius: 20px; padding: 1px;
+    background: linear-gradient(135deg, rgba(0,212,170,0.2), transparent 50%, rgba(0,168,255,0.15));
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor; mask-composite: exclude;
+    pointer-events: none;
+  }
+  .scene:hover { transform: translateY(-2px); box-shadow: 0 12px 40px rgba(0,0,0,0.5); }
+
+  /* 场景标题 */
+  .scene-title {
+    font-size: 0.9rem; font-weight: 600; margin-bottom: 14px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .scene-title .dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--primary);
+    box-shadow: 0 0 8px var(--primary-glow);
+  }
+
+  /* ========== 角色选择 ========== */
+  .role-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+  }
+  .role-card {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 16px;
+    padding: 20px 12px;
+    text-align: center; cursor: pointer;
+    transition: all 0.35s cubic-bezier(.34,1.56,.64,1);
+    position: relative; overflow: hidden;
+  }
+  .role-card .emoji { font-size: 2.2rem; display: block; margin-bottom: 8px; transition: transform 0.3s; }
+  .role-card .name { font-size: 0.85rem; font-weight: 600; }
+  .role-card .desc { font-size: 0.68rem; color: var(--text-dim); margin-top: 4px; }
+  .role-card:hover { border-color: rgba(0,212,170,0.3); transform: translateY(-4px) scale(1.02); }
+  .role-card:hover .emoji { transform: scale(1.15); }
+  .role-card.selected {
+    border-color: var(--primary);
+    background: rgba(0,212,170,0.08);
+    box-shadow: 0 0 25px var(--primary-glow), inset 0 0 20px rgba(0,212,170,0.05);
+    transform: scale(1.03);
+  }
+  .role-card.selected::after {
+    content: '✓'; position: absolute; top: 8px; right: 10px;
+    color: var(--primary); font-size: 0.9rem; font-weight: 700;
+  }
+
+  /* ========== 面试间 ========== */
+  .interview-top {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 4px;
+  }
+  .interview-top .left { font-weight: 600; font-size: 0.9rem; }
+  .step-dots {
+    display: flex; gap: 6px; align-items: center;
+  }
+  .step-dot {
+    width: 28px; height: 28px; border-radius: 50%;
+    border: 2px solid rgba(255,255,255,0.1);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.7rem; font-weight: 700; color: var(--text-dim);
+    transition: all 0.4s;
+  }
+  .step-dot.done { border-color: var(--primary); background: rgba(0,212,170,0.15); color: var(--primary); }
+  .step-dot.current {
+    border-color: var(--accent); background: rgba(0,168,255,0.2);
+    color: var(--accent);
+    animation: pulseGlow 1.5s ease-in-out infinite;
+  }
+  @keyframes pulseGlow {
+    0%,100% { box-shadow: 0 0 0 0 var(--accent-glow); }
+    50% { box-shadow: 0 0 0 10px transparent; }
+  }
+  .step-line {
+    width: 20px; height: 2px; background: rgba(255,255,255,0.08);
+    border-radius: 1px; transition: background 0.4s;
+  }
+  .step-line.done { background: var(--primary); }
+
+  .chat-box {
+    background: rgba(6,10,18,0.8);
+    border-radius: 16px;
+    padding: 16px;
+    min-height: 260px; max-height: 380px;
+    overflow-y: auto;
+    display: flex; flex-direction: column; gap: 14px;
+    margin: 14px 0;
+    border: 1px solid rgba(255,255,255,0.04);
+  }
+  .chat-box::-webkit-scrollbar { width: 3px; }
+  .chat-box::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.06); border-radius: 2px; }
+
+  .msg {
+    display: flex; flex-direction: column;
+    max-width: 88%;
+    animation: msgIn 0.45s cubic-bezier(.34,1.56,.64,1);
+  }
+  .msg.ai { align-items: flex-start; }
+  .msg.user { align-items: flex-end; align-self: flex-end; animation-name: msgInRight; }
+  @keyframes msgIn {
+    from { opacity: 0; transform: translateX(-16px) scale(0.96); }
+    to { opacity: 1; transform: translateX(0) scale(1); }
+  }
+  @keyframes msgInRight {
+    from { opacity: 0; transform: translateX(16px) scale(0.96); }
+    to { opacity: 1; transform: translateX(0) scale(1); }
+  }
+  .msg-bubble {
+    padding: 11px 16px; border-radius: 18px;
+    font-size: 0.9rem; line-height: 1.6;
+    word-break: break-word;
+  }
+  .msg.ai .msg-bubble {
+    background: rgba(30,41,59,0.7);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-bottom-left-radius: 3px;
+    color: #e2e8f0;
+  }
+  .msg.user .msg-bubble {
+    background: linear-gradient(135deg, var(--primary), #00a896);
+    color: #000; font-weight: 500;
+    border-bottom-right-radius: 3px;
+  }
+  .msg-feedback {
+    font-size: 0.68rem; color: #4a5568; margin-top: 4px;
+    padding-left: 10px; animation: fadeIn 0.5s 0.2s both;
+  }
+  .typing-cursor::after {
+    content: '|'; animation: blink 0.8s step-end infinite;
+    color: var(--primary); margin-left: 1px;
+  }
+
+  /* 思考动画 */
+  .thinking-box {
+    display: flex; gap: 4px; padding: 12px 16px;
+    background: rgba(30,41,59,0.5);
+    border-radius: 18px; border-bottom-left-radius: 3px;
+    align-self: flex-start;
+  }
+  .thinking-box span {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--accent);
+    animation: bounceDot 1.2s ease-in-out infinite;
+  }
+  .thinking-box span:nth-child(2) { animation-delay: 0.2s; }
+  .thinking-box span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes bounceDot {
+    0%,60%,100% { transform: translateY(0); opacity: 0.4; }
+    30% { transform: translateY(-7px); opacity: 1; }
+  }
+
+  /* 输入区 */
+  .input-area {
+    display: flex; gap: 10px;
+  }
+  .input-area input {
+    flex: 1; padding: 12px 16px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 14px; color: var(--text);
+    font-size: 0.9rem; outline: none; font-family: inherit;
+    transition: all 0.3s;
+  }
+  .input-area input::placeholder { color: #475569; }
+  .input-area input:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px var(--primary-glow);
+    background: rgba(255,255,255,0.06);
+  }
+  .input-area input:disabled { opacity: 0.3; }
+
+  .btn {
+    padding: 12px 22px; border-radius: 14px;
+    border: none; font-weight: 600; font-size: 0.88rem;
+    cursor: pointer; transition: all 0.25s;
+    font-family: inherit; letter-spacing: 1px;
+    position: relative; overflow: hidden;
+  }
+  .btn-primary {
+    background: linear-gradient(135deg, var(--primary), #00a896);
+    color: #000;
+  }
+  .btn-primary:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 4px 20px var(--primary-glow); }
+  .btn-primary:disabled { background: #1e293b; color: #475569; cursor: not-allowed; box-shadow: none; }
+  .btn-ghost {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.1);
+    color: var(--text-dim);
+  }
+  .btn-ghost:hover { border-color: rgba(255,255,255,0.25); color: var(--text); }
+
+  .start-wrap { text-align: center; margin-top: 14px; }
+  .start-wrap .btn { padding: 13px 44px; font-size: 1rem; }
+  .start-wrap .btn-pulse {
+    animation: btnGlow 2.2s ease-in-out infinite;
+  }
+  @keyframes btnGlow {
+    0%,100% { box-shadow: 0 0 15px var(--primary-glow); }
+    50% { box-shadow: 0 0 35px var(--primary-glow); }
+  }
+
+  /* ========== 报告 ========== */
+  #reportScene { display: none; }
+  .score-ring-wrap {
+    display: flex; justify-content: center; padding: 20px 0 10px;
+  }
+  .score-ring {
+    width: 150px; height: 150px; border-radius: 50%;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    position: relative;
+  }
+  .score-ring::before {
+    content: ''; position: absolute; inset: -5px;
+    border-radius: 50%; padding: 5px;
+    background: conic-gradient(var(--primary), var(--accent), #a78bfa, var(--primary));
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor; mask-composite: exclude;
+    animation: spinRing 5s linear infinite;
+  }
+  @keyframes spinRing { to { transform: rotate(360deg); } }
+  .score-num { font-size: 2.8rem; font-weight: 800; line-height: 1; }
+  .score-label { font-size: 0.75rem; color: var(--text-dim); margin-top: 4px; }
+
+  .dim-bars { padding: 0 4px; }
+  .dim-item {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 10px;
+  }
+  .dim-icon { font-size: 1.1rem; width: 24px; text-align: center; }
+  .dim-name { font-size: 0.78rem; color: var(--text-dim); width: 64px; }
+  .dim-track {
+    flex: 1; height: 7px; background: rgba(255,255,255,0.05);
+    border-radius: 4px; overflow: hidden;
+  }
+  .dim-fill {
+    height: 100%; border-radius: 4px;
+    width: 0; transition: width 1.4s cubic-bezier(.22,.61,.36,1);
+  }
+  .dim-fill.l { background: linear-gradient(90deg, var(--primary), #00a896); }
+  .dim-fill.p { background: linear-gradient(90deg, var(--accent), #0066ff); }
+  .dim-fill.a { background: linear-gradient(90deg, #a78bfa, #7c3aed); }
+  .dim-fill.c { background: linear-gradient(90deg, var(--gold), #f59e0b); }
+  .dim-val { font-size: 0.8rem; font-weight: 700; width: 32px; text-align: right; }
+
+  .advice-box {
+    background: rgba(255,255,255,0.03);
+    border-radius: 14px; padding: 14px 16px;
+    margin-top: 14px; font-size: 0.82rem;
+    color: var(--text-dim); line-height: 1.7;
+    border: 1px solid rgba(255,255,255,0.04);
+  }
+
+  .action-btns {
+    display: flex; gap: 10px; justify-content: center; margin-top: 18px;
+  }
+
+  /* 撒花 */
+  .confetti {
+    position: fixed; z-index: 9999; pointer-events: none;
+    animation: confettiFall linear forwards;
+  }
+  @keyframes confettiFall {
+    0% { transform: translateY(0) rotate(0deg) scale(1); opacity: 1; }
+    80% { opacity: 1; }
+    100% { transform: translateY(105vh) rotate(720deg) scale(0.3); opacity: 0; }
+  }
+
+  /* Toast */
+  .toast {
+    position: fixed; top: 16px; left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0,212,170,0.95); color: #000;
+    padding: 10px 24px; border-radius: 40px;
+    font-size: 0.82rem; font-weight: 600; z-index: 300;
+    animation: toastIn 0.4s cubic-bezier(.34,1.56,.64,1), toastOut 0.3s 2s ease forwards;
+  }
+  @keyframes toastIn {
+    from { opacity: 0; transform: translateX(-50%) translateY(-16px); }
+    to { opacity: 1; transform: translateX(-50%) translateY(0); }
+  }
+  @keyframes toastOut {
+    to { opacity: 0; transform: translateX(-50%) translateY(-10px); }
+  }
+
+  footer {
+    text-align: center; font-size: 0.65rem;
+    color: #1e293b; padding: 20px 0;
+    letter-spacing: 1px;
+  }
+
+  @media (max-width: 480px) {
+    .intro-year { font-size: 2.4rem; }
+    .role-grid { grid-template-columns: 1fr; }
+    .topbar h1 { font-size: 1.3rem; }
+    .score-num { font-size: 2.2rem; }
+    .score-ring { width: 120px; height: 120px; }
+  }
+</style>
 </head>
 <body>
-<!-- 动态粒子背景 -->
-<div id="particles"></div>
-<div class="glow-orb top-right"></div>
-<div class="glow-orb bottom-left"></div>
 
-<div class="container">
-    <div class="card header">
-        <h1>🎙️ AI面试模拟器</h1>
-        <div class="badge">✨ 腾讯青科实训营 · 未来HR挑战 ✨</div>
-        <p class="subtitle">选择岗位 → 1v1 AI面试 → 能力雷达报告</p>
-    </div>
+<!-- 粒子雨背景 -->
+<div class="rain" id="rain"></div>
 
-    <!-- 岗位选择 -->
-    <div class="card">
-        <div style="font-weight: 600; margin-bottom: 4px;">📌 选择面试岗位</div>
-        <div class="job-selector" id="jobSelector">
-            <button data-job="pm" class="job-btn">📊 产品经理</button>
-            <button data-job="hr" class="job-btn">👥 HR 专员</button>
-            <button data-job="dev" class="job-btn">💻 软件开发</button>
-        </div>
-        <div id="selectedJobDisplay" style="font-size: 0.8rem; color: #4da6ff; text-align: center; margin-top: 8px;">
-            未选择，点击上方岗位开始面试
-        </div>
-    </div>
+<!-- ========== 开场动画 ========== -->
+<div id="introScreen">
+  <div class="intro-year">公元2030年</div>
+  <div class="intro-line" id="introLine"><span class="cursor"></span></div>
+  <button class="intro-btn" id="introBtn" onclick="enterMain()">开启面试</button>
+</div>
 
-    <!-- 面试间 -->
-    <div class="card" id="interviewCard">
-        <div class="interview-header">
-            <span>💬 面试间</span>
-            <div class="progress-wrap" id="progressWrap">
-                <div class="progress-step" id="ps1">1</div>
-                <div class="progress-line" id="pl1"></div>
-                <div class="progress-step" id="ps2">2</div>
-                <div class="progress-line" id="pl2"></div>
-                <div class="progress-step" id="ps3">3</div>
-            </div>
-            <button id="resetInterviewBtn" class="btn-ghost" style="padding:6px 14px; font-size:0.82rem;">🔄 重置</button>
-        </div>
-        <div class="chat-area" id="chatArea">
-            <div class="message ai">
-                <div class="bubble">👋 你好！我是你的AI面试官。选择一个岗位，点击「开始面试」，我会根据岗位问你3个专业问题～</div>
-            </div>
-        </div>
-        <div class="input-group">
-            <input type="text" id="answerInput" placeholder="输入你的回答..." autocomplete="off" disabled>
-            <button id="sendBtn" disabled>发送</button>
-        </div>
-        <div class="start-btn">
-            <button id="startInterviewBtn" class="btn-green">🚀 开始面试</button>
-        </div>
-    </div>
+<!-- ========== 主内容 ========== -->
+<div class="wrap" id="mainWrap">
 
-    <!-- 报告 -->
-    <div class="card" id="reportCard" style="display: none;">
-        <div style="font-weight: 700; font-size: 1.2rem; text-align: center;">📈 面试报告</div>
-        <div id="reportContent"></div>
-        <div class="action-row">
-            <button id="shareImageBtn" style="background:linear-gradient(135deg,#1e293b,#0f172a);">📸 分享卡片</button>
-            <button id="newInterviewBtn" class="btn-ghost">🔄 重新面试</button>
-        </div>
+  <div class="topbar">
+    <div class="chapter-tag">第一章 · 启程</div>
+    <h1>AI面试模拟器</h1>
+    <div class="sub">腾讯青科实训营 · 未来HR挑战</div>
+  </div>
+
+  <!-- 角色选择 -->
+  <div class="scene">
+    <div class="scene-title"><div class="dot"></div>选择你的角色</div>
+    <div class="role-grid" id="roleGrid">
+      <div class="role-card" data-job="pm" onclick="selectRole(this,'pm')">
+        <span class="emoji">📊</span>
+        <div class="name">产品经理</div>
+        <div class="desc">洞察需求 · 驱动迭代</div>
+      </div>
+      <div class="role-card" data-job="hr" onclick="selectRole(this,'hr')">
+        <span class="emoji">👥</span>
+        <div class="name">HR 专员</div>
+        <div class="desc">识人育人 · 组织效能</div>
+      </div>
+      <div class="role-card" data-job="dev" onclick="selectRole(this,'dev')">
+        <span class="emoji">💻</span>
+        <div class="name">软件开发</div>
+        <div class="desc">代码筑基 · 技术破局</div>
+      </div>
     </div>
-    <footer>⚡ 模拟AI面试官 · 动态评分 · 能力雷达图 · 撒花特效</footer>
+    <div id="roleHint" style="text-align:center; font-size:0.78rem; color:var(--text-dim); margin-top:12px;">
+      点击上方角色，开始你的面试之旅
+    </div>
+  </div>
+
+  <!-- 面试间 -->
+  <div class="scene">
+    <div class="interview-top">
+      <div class="left">💬 面试间</div>
+      <div style="display:flex; align-items:center; gap:8px;">
+        <div class="step-dots" id="stepDots">
+          <div class="step-dot" id="sd1">1</div>
+          <div class="step-line" id="sl1"></div>
+          <div class="step-dot" id="sd2">2</div>
+          <div class="step-line" id="sl2"></div>
+          <div class="step-dot" id="sd3">3</div>
+        </div>
+        <button class="btn btn-ghost" style="padding:6px 12px; font-size:0.75rem;" onclick="resetAll()">🔄 重置</button>
+      </div>
+    </div>
+    <div class="chat-box" id="chatBox">
+      <div class="msg ai">
+        <div class="msg-bubble">👋 欢迎来到AI面试世界。请先在上方选择你的角色，然后点击「开启面试」，我将对你进行3轮专业考核。</div>
+      </div>
+    </div>
+    <div class="input-area">
+      <input type="text" id="answerInput" placeholder="输入你的回答..." autocomplete="off" disabled>
+      <button class="btn btn-primary" id="sendBtn" disabled onclick="submitAnswer()">发送</button>
+    </div>
+    <div class="start-wrap">
+      <button class="btn btn-primary btn-pulse" id="startBtn" onclick="startInterview()">🚀 开启面试</button>
+    </div>
+  </div>
+
+  <!-- 报告 -->
+  <div class="scene" id="reportScene">
+    <div style="text-align:center; font-weight:700; font-size:1.1rem; margin-bottom:4px;">📈 面试报告</div>
+    <div id="reportBody"></div>
+    <div class="action-btns">
+      <button class="btn btn-ghost" onclick="shareReport()">📸 分享卡片</button>
+      <button class="btn btn-primary" onclick="resetAll()">🔄 重新面试</button>
+    </div>
+  </div>
+
+  <footer>⚡ AI面试模拟器 · 动态评分 · 能力雷达图 · 沉浸式叙事</footer>
 </div>
 
 <script>
-// ============ 粒子背景 ============
-(function() {
-    const container = document.getElementById('particles');
-    const colors = ['#4da6ff','#00d4aa','#a78bfa','#fbbf24','#60a5fa'];
-    for (let i = 0; i < 35; i++) {
-        const p = document.createElement('div');
-        p.className = 'particle';
-        const size = Math.random() * 4 + 2;
-        p.style.width = size + 'px';
-        p.style.height = size + 'px';
-        p.style.left = Math.random() * 100 + '%';
-        p.style.top = Math.random() * 100 + '%';
-        p.style.background = colors[Math.floor(Math.random() * colors.length)];
-        p.style.animationDuration = (Math.random() * 12 + 8) + 's';
-        p.style.animationDelay = (Math.random() * 10) + 's';
-        container.appendChild(p);
-    }
+// ========== 粒子雨 ==========
+(function(){
+  const rain = document.getElementById('rain');
+  for (let i=0;i<40;i++){
+    const d = document.createElement('div');
+    d.className = 'rain-drop';
+    d.style.left = Math.random()*100+'%';
+    d.style.height = (Math.random()*60+20)+'px';
+    d.style.animationDuration = (Math.random()*1.5+0.8)+'s';
+    d.style.animationDelay = Math.random()*2+'s';
+    d.style.opacity = Math.random()*0.3+0.1;
+    rain.appendChild(d);
+  }
 })();
 
-// ============ Toast ============
-function showToast(msg) {
-    const t = document.createElement('div');
-    t.className = 'toast';
-    t.textContent = msg;
-    document.body.appendChild(t);
-    setTimeout(() => t.remove(), 2200);
+// ========== 开场打字机 ==========
+const introTexts = [
+  "AI已全面重塑职场生态，",
+  "字节跳动挥舞算法利刃，阿里筑起数据高墙，",
+  "而你，正站在人生的十字路口——",
+  "一份来自未来的面试邀请，",
+  "已悄然抵达你的终端。"
+];
+let introIdx = 0, introChar = 0;
+const introLine = document.getElementById('introLine');
+
+function typeIntro() {
+  if (introIdx >= introTexts.length) {
+    document.getElementById('introBtn').classList.add('show');
+    return;
+  }
+  const text = introTexts[introIdx];
+  if (introChar < text.length) {
+    introLine.childNodes[0].textContent += text[introChar];
+    introChar++;
+    setTimeout(typeIntro, 35 + Math.random()*25);
+  } else {
+    introLine.childNodes[0].textContent += '\n';
+    introIdx++; introChar = 0;
+    setTimeout(typeIntro, 500);
+  }
+}
+// 启动开场
+setTimeout(typeIntro, 600);
+
+function enterMain() {
+  document.getElementById('introScreen').classList.add('done');
+  setTimeout(() => {
+    document.getElementById('mainWrap').classList.add('show');
+  }, 400);
 }
 
-// ============ 撒花 ============
-function launchConfetti() {
-    const colors = ['#4da6ff','#00d4aa','#a78bfa','#fbbf24','#f472b6','#60a5fa','#34d399','#fb923c'];
-    for (let i = 0; i < 80; i++) {
-        const el = document.createElement('div');
-        el.className = 'confetti-piece';
-        el.style.left = Math.random() * 100 + '%';
-        el.style.top = -(Math.random() * 20 + 5) + 'px';
-        el.style.width = (Math.random() * 10 + 5) + 'px';
-        el.style.height = (Math.random() * 6 + 4) + 'px';
-        el.style.background = colors[Math.floor(Math.random() * colors.length)];
-        el.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
-        el.style.animationDuration = (Math.random() * 2 + 2) + 's';
-        el.style.animationDelay = Math.random() * 0.8 + 's';
-        document.body.appendChild(el);
-        setTimeout(() => el.remove(), 3500);
-    }
+// ========== Toast ==========
+function toast(msg) {
+  const t = document.createElement('div');
+  t.className = 'toast'; t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 2400);
 }
 
-// ============ 核心 ============
+// ========== 撒花 ==========
+function confetti() {
+  const colors = ['#00d4aa','#00a8ff','#a78bfa','#ffd700','#f472b6','#60a5fa'];
+  for (let i=0;i<70;i++){
+    const el = document.createElement('div');
+    el.className = 'confetti';
+    el.style.left = Math.random()*100+'%';
+    el.style.top = -(Math.random()*15+5)+'px';
+    el.style.width = (Math.random()*8+4)+'px';
+    el.style.height = (Math.random()*6+3)+'px';
+    el.style.background = colors[Math.floor(Math.random()*colors.length)];
+    el.style.borderRadius = Math.random()>0.5?'50%':'2px';
+    el.style.animationDuration = (Math.random()*2+2)+'s';
+    el.style.animationDelay = Math.random()*0.6+'s';
+    document.body.appendChild(el);
+    setTimeout(()=>el.remove(),3200);
+  }
+}
+
+// ========== 核心逻辑 ==========
 const jobMap = {
-    pm: { name: "产品经理", icon: "📊" },
-    hr: { name: "HR专员", icon: "👥" },
-    dev: { name: "软件开发工程师", icon: "💻" }
+  pm: { name:"产品经理", icon:"📊" },
+  hr: { name:"HR专员", icon:"👥" },
+  dev: { name:"软件开发工程师", icon:"💻" }
 };
-
 const questionBank = {
-    pm: { questions: [
-        "你最喜欢的一款互联网产品是什么？如果让你迭代一个功能，你会改哪里？",
-        "假设开发资源严重不足，老板却要求两周上线新功能，你如何权衡需求优先级？",
-        "用户反馈你的产品核心路径太复杂，转化率下降，你准备怎么分析并解决？"
-    ]},
-    hr: { questions: [
-        "你认为未来HR最核心的能力是什么？请结合业务和AI说一下你的看法。",
-        "假如部门负责人和一位高潜员工发生激烈冲突，你作为HRBP会怎么介入？",
-        "如何用数据分析来提升新员工留存率？简单说说你的思路。"
-    ]},
-    dev: { questions: [
-        "你最近在项目中遇到的最棘手的技术难题是什么？如何解决的？",
-        "代码可读性和极致性能之间你怎么取舍？举例说明。",
-        "如果产品经理提了一个需求，技术上实现成本极高但业务价值一般，你会怎么沟通？"
-    ]}
+  pm: { questions: [
+    "你最喜欢的一款互联网产品是什么？如果让你迭代一个功能，你会改哪里？",
+    "假设开发资源严重不足，老板却要求两周上线新功能，你如何权衡需求优先级？",
+    "用户反馈你的产品核心路径太复杂，转化率下降，你准备怎么分析并解决？"
+  ]},
+  hr: { questions: [
+    "你认为未来HR最核心的能力是什么？请结合业务和AI说一下你的看法。",
+    "假如部门负责人和一位高潜员工发生激烈冲突，你作为HRBP会怎么介入？",
+    "如何用数据分析来提升新员工留存率？简单说说你的思路。"
+  ]},
+  dev: { questions: [
+    "你最近在项目中遇到的最棘手的技术难题是什么？如何解决的？",
+    "代码可读性和极致性能之间你怎么取舍？举例说明。",
+    "如果产品经理提了一个需求，技术上实现成本极高但业务价值一般，你会怎么沟通？"
+  ]}
 };
 
 let currentJob = null, currentStep = 0, questionsList = [];
 let userAnswers = [], aiFeedbacks = [], scoresPerAnswer = [];
-let dimensionScores = { logic: 0, profession: 0, adaptability: 0, communication: 0 };
+let dimensionScores = { logic:0, profession:0, adaptability:0, communication:0 };
 let chartInstance = null;
 
-const chatArea = document.getElementById('chatArea');
+const chatBox = document.getElementById('chatBox');
 const answerInput = document.getElementById('answerInput');
 const sendBtn = document.getElementById('sendBtn');
-const startBtn = document.getElementById('startInterviewBtn');
-const resetBtn = document.getElementById('resetInterviewBtn');
-const reportCardDiv = document.getElementById('reportCard');
-const selectedJobDisplay = document.getElementById('selectedJobDisplay');
-const jobBtns = document.querySelectorAll('.job-btn');
+const startBtn = document.getElementById('startBtn');
+const reportScene = document.getElementById('reportScene');
+const roleHint = document.getElementById('roleHint');
 
-// 打字机效果
-async function typeMessage(role, text, feedbackExtra = null) {
-    const msgDiv = document.createElement('div');
-    msgDiv.className = `message ${role}`;
-    const bubble = document.createElement('div');
-    bubble.className = 'bubble';
-    msgDiv.appendChild(bubble);
-    chatArea.appendChild(msgDiv);
-    chatArea.scrollTop = chatArea.scrollHeight;
+// 打字机发消息
+async function typeMsg(role, text, feedback=null) {
+  const msg = document.createElement('div');
+  msg.className = 'msg ' + role;
+  const bubble = document.createElement('div');
+  bubble.className = 'msg-bubble';
+  msg.appendChild(bubble);
+  chatBox.appendChild(msg);
+  chatBox.scrollTop = chatBox.scrollHeight;
 
-    if (role === 'ai' && text.length > 15) {
-        for (let i = 0; i < text.length; i++) {
-            bubble.textContent = text.slice(0, i + 1);
-            bubble.classList.add('typing-cursor');
-            await new Promise(r => setTimeout(r, 20 + Math.random() * 15));
-            chatArea.scrollTop = chatArea.scrollHeight;
-        }
-        bubble.classList.remove('typing-cursor');
-    } else {
-        bubble.textContent = text;
+  if (role === 'ai' && text.length > 10) {
+    for (let i = 0; i < text.length; i++) {
+      bubble.textContent = text.slice(0, i+1);
+      bubble.classList.add('typing-cursor');
+      await new Promise(r => setTimeout(r, 18 + Math.random()*12));
+      chatBox.scrollTop = chatBox.scrollHeight;
     }
-
-    if (feedbackExtra && role === 'ai') {
-        const small = document.createElement('div');
-        small.className = 'feedback';
-        small.textContent = feedbackExtra;
-        msgDiv.appendChild(small);
-    }
-    chatArea.scrollTop = chatArea.scrollHeight;
+    bubble.classList.remove('typing-cursor');
+  } else {
+    bubble.textContent = text;
+  }
+  if (feedback) {
+    const f = document.createElement('div');
+    f.className = 'msg-feedback'; f.textContent = feedback;
+    msg.appendChild(f);
+  }
+  chatBox.scrollTop = chatBox.scrollHeight;
 }
 
-// 添加思考动画
 function showThinking() {
-    const div = document.createElement('div');
-    div.className = 'message ai thinking-msg';
-    const thinking = document.createElement('div');
-    thinking.className = 'thinking';
-    thinking.innerHTML = '<div class="dot"></div><div class="dot"></div><div class="dot"></div>';
-    div.appendChild(thinking);
-    chatArea.appendChild(div);
-    chatArea.scrollTop = chatArea.scrollHeight;
-    return div;
+  const div = document.createElement('div');
+  div.className = 'msg ai thinking';
+  div.innerHTML = '<div class="thinking-box"><span></span><span></span><span></span></div>';
+  chatBox.appendChild(div);
+  chatBox.scrollTop = chatBox.scrollHeight;
+  return div;
+}
+function removeThinking(el) { if(el&&el.parentNode) el.parentNode.removeChild(el); }
+
+function clearChat(welcome=true) {
+  chatBox.innerHTML = '';
+  if (welcome) {
+    chatBox.innerHTML = '<div class="msg ai"><div class="msg-bubble">👋 欢迎来到AI面试世界。请先在上方选择你的角色，然后点击「开启面试」，我将对你进行3轮专业考核。</div></div>';
+  }
 }
 
-function removeThinking(el) {
-    if (el && el.parentNode) el.parentNode.removeChild(el);
+function updateDots() {
+  const ids = { sd1:'sd1',sd2:'sd2',sd3:'sd3',sl1:'sl1',sl2:'sl2' };
+  ['sd1','sd2','sd3','sl1','sl2'].forEach(k => {
+    const el = document.getElementById(ids[k]||k);
+    el.className = el.className.replace(/\b(done|current)\b/g,'').trim();
+  });
+  if (currentStep >= 1) document.getElementById('sd1').classList.add('done');
+  if (currentStep >= 2) { document.getElementById('sd2').classList.add('done'); document.getElementById('sl1').classList.add('done'); }
+  if (currentStep >= 3) { document.getElementById('sd3').classList.add('done'); document.getElementById('sl2').classList.add('done'); }
+  if (currentStep >= 1 && currentStep <= 3) {
+    const cur = document.getElementById('sd'+currentStep);
+    cur.classList.remove('done'); cur.classList.add('current');
+  }
 }
 
-function clearChat(keepWelcome = true) {
-    chatArea.innerHTML = '';
-    if (keepWelcome) {
-        const div = document.createElement('div');
-        div.className = 'message ai';
-        div.innerHTML = '<div class="bubble">👋 你好！我是你的AI面试官。选择一个岗位，点击「开始面试」，我会根据岗位问你3个专业问题～</div>';
-        chatArea.appendChild(div);
+function selectRole(el, job) {
+  if (currentStep > 0 && currentStep < 4) {
+    if (!confirm('切换角色会中断当前面试，确定吗？')) return;
+    resetAll();
+  }
+  currentJob = job;
+  document.querySelectorAll('.role-card').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  roleHint.innerHTML = `<span style="color:var(--primary)">已选：${jobMap[job].icon} ${jobMap[job].name}</span>，点击「开启面试」开始考核`;
+}
+
+function simulateEval(jobKey, qIdx, ans) {
+  let score = 60;
+  const len = ans.trim().length;
+  if (len > 100) score += 18;
+  else if (len > 60) score += 12;
+  else if (len > 30) score += 6;
+  else if (len < 10) score -= 22;
+  const kw = {
+    pm: ['用户','数据','优先级','迭代','需求','mvp','转化','痛点','场景','体验'],
+    hr: ['业务','沟通','共情','ai','数据','文化','冲突','人才','组织','战略'],
+    dev: ['算法','性能','重构','测试','架构','debug','协作','扩展','维护','优化']
+  };
+  let mc = 0;
+  (kw[jobKey]||[]).forEach(k => { if(ans.toLowerCase().includes(k.toLowerCase())) mc++; });
+  score += Math.min(22, mc*4);
+  score = Math.min(98, Math.max(28, Math.round(score)));
+  let cmt = score>=88?"回答很出色，逻辑清晰有深度！":score>=75?"不错，抓住了要点，再丰富一下细节会更棒。":score>=60?"基本回答但缺乏亮点，建议结合具体案例。":"回答略显单薄，需要更结构化思考。";
+  return {
+    score,
+    comment: cmt,
+    dims: {
+      logic: Math.min(98,Math.max(30,60+(score-60)*0.45+(Math.random()*8-4))),
+      profession: Math.min(98,Math.max(30,60+(score-60)*0.5+(Math.random()*6-3))),
+      adaptability: Math.min(98,Math.max(30,55+(score-55)*0.35+(Math.random()*10-5))),
+      communication: Math.min(98,Math.max(30,65+(score-65)*0.3+(Math.random()*8-4)))
     }
+  };
 }
 
-// 更新进度条
-function updateProgress() {
-    const ps1 = document.getElementById('ps1');
-    const ps2 = document.getElementById('ps2');
-    const ps3 = document.getElementById('ps3');
-    const pl1 = document.getElementById('pl1');
-    const pl2 = document.getElementById('pl2');
-    [ps1,ps2,ps3,pl1,pl2].forEach(el => el.className = el.className.replace(/\b(done|current)\b/g, '').trim());
-    if (currentStep >= 1) { ps1.classList.add('done'); }
-    if (currentStep >= 2) { ps2.classList.add('done'); pl1.classList.add('done'); }
-    if (currentStep >= 3) { ps3.classList.add('done'); pl2.classList.add('done'); }
-    if (currentStep >= 1 && currentStep <= 3) {
-        const curEl = document.getElementById('ps' + currentStep);
-        curEl.classList.remove('done');
-        curEl.classList.add('current');
-    }
+function animateNum(el, from, to, dur) {
+  const t0 = performance.now();
+  function tick(t) {
+    const p = Math.min((t-t0)/dur, 1);
+    const e = 1 - Math.pow(1-p, 3);
+    el.textContent = Math.round(from + (to-from)*e);
+    if (p < 1) requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
 }
 
-// 评分
-function simulateAIEvaluation(jobKey, questionIdx, userAnswer) {
-    let baseScore = 60;
-    const len = userAnswer.trim().length;
-    if (len > 100) baseScore += 18;
-    else if (len > 60) baseScore += 12;
-    else if (len > 30) baseScore += 6;
-    else if (len < 10) baseScore -= 22;
-    const keywords = {
-        pm: ['用户','数据','优先级','迭代','需求','mvp','转化','痛点','场景','体验'],
-        hr: ['业务','沟通','共情','ai','数据','文化','冲突','人才','组织','战略'],
-        dev: ['算法','性能','重构','测试','架构','debug','协作','扩展','维护','优化']
-    };
-    let kwList = keywords[jobKey] || [];
-    let matchCount = 0;
-    kwList.forEach(kw => {
-        if (userAnswer.toLowerCase().includes(kw.toLowerCase())) matchCount++;
-    });
-    baseScore += Math.min(22, matchCount * 4);
-    let finalScore = Math.min(98, Math.max(28, Math.round(baseScore)));
-    let comment = "";
-    if (finalScore >= 88) comment = "回答很出色，逻辑清晰有深度！";
-    else if (finalScore >= 75) comment = "不错，抓住了要点，再丰富一下细节会更棒。";
-    else if (finalScore >= 60) comment = "基本回答但缺乏亮点，建议结合具体案例。";
-    else comment = "回答略显单薄，需要更结构化思考。";
+async function submitAnswer() {
+  if (!currentJob) { await typeMsg('ai','请先选择一个角色再开始面试。'); return; }
+  if (currentStep < 1 || currentStep > questionsList.length) return;
+  const ans = answerInput.value.trim();
+  if (!ans) { await typeMsg('ai','🤔 请写一点回答再提交吧，简短也可以～'); return; }
+  userAnswers.push(ans);
+  await typeMsg('user', ans);
+  answerInput.value = '';
+  sendBtn.disabled = true; answerInput.disabled = true;
 
-    let logic = Math.min(98, Math.max(30, 60 + (finalScore-60)*0.45 + (Math.random()*8-4)));
-    let profession = Math.min(98, Math.max(30, 60 + (finalScore-60)*0.5 + (Math.random()*6-3)));
-    let adaptability = Math.min(98, Math.max(30, 55 + (finalScore-55)*0.35 + (Math.random()*10-5)));
-    let communication = Math.min(98, Math.max(30, 65 + (finalScore-65)*0.3 + (Math.random()*8-4)));
-    return { score: finalScore, comment, dims: { logic, profession, adaptability, communication } };
-}
+  const th = showThinking();
+  await new Promise(r => setTimeout(r, 1000+Math.random()*500));
+  removeThinking(th);
 
-// 数字滚动
-function animateValue(el, start, end, duration) {
-    const startTime = performance.now();
-    function tick(now) {
-        const elapsed = now - startTime;
-        const progress = Math.min(elapsed / duration, 1);
-        const ease = 1 - Math.pow(1 - progress, 3);
-        el.textContent = Math.round(start + (end - start) * ease);
-        if (progress < 1) requestAnimationFrame(tick);
-    }
-    requestAnimationFrame(tick);
-}
+  const qIdx = currentStep - 1;
+  const ev = simulateEval(currentJob, qIdx, ans);
+  scoresPerAnswer.push(ev.score);
+  dimensionScores.logic += ev.dims.logic;
+  dimensionScores.profession += ev.dims.profession;
+  dimensionScores.adaptability += ev.dims.adaptability;
+  dimensionScores.communication += ev.dims.communication;
 
-// 处理回答
-async function handleAnswer() {
-    if (!currentJob) { await typeMessage('ai', '请先选择一个岗位再开始面试。'); return; }
-    if (currentStep < 1 || currentStep > questionsList.length) return;
-    const answer = answerInput.value.trim();
-    if (!answer) { await typeMessage('ai', '🤔 请写一点回答再提交吧，简短也可以～'); return; }
-    userAnswers.push(answer);
-    await typeMessage('user', answer);
-    answerInput.value = '';
-    sendBtn.disabled = true;
-    answerInput.disabled = true;
+  const fb = `📝 点评：${ev.comment} (本题得分 ${ev.score})`;
+  aiFeedbacks.push(fb);
+  await typeMsg('ai', `第${currentStep}题回答完毕。${fb}`);
 
-    const thinkingEl = showThinking();
-    await new Promise(r => setTimeout(r, 1000 + Math.random() * 600));
-    removeThinking(thinkingEl);
-
-    const currentQIdx = currentStep - 1;
-    const evalResult = simulateAIEvaluation(currentJob, currentQIdx, answer);
-    scoresPerAnswer.push(evalResult.score);
-    dimensionScores.logic += evalResult.dims.logic;
-    dimensionScores.profession += evalResult.dims.profession;
-    dimensionScores.adaptability += evalResult.dims.adaptability;
-    dimensionScores.communication += evalResult.dims.communication;
-
-    const feedbackMsg = `📝 点评：${evalResult.comment} (本题得分 ${evalResult.score})`;
-    aiFeedbacks.push(feedbackMsg);
-    await typeMessage('ai', `第${currentStep}题回答完毕。${feedbackMsg}`);
-
-    if (currentStep === questionsList.length) {
-        currentStep = 4;
-        sendBtn.disabled = true;
-        answerInput.disabled = true;
-        updateProgress();
-        generateReport();
-    } else {
-        currentStep++;
-        updateProgress();
-        const nextQ = questionsList[currentStep - 1];
-        await typeMessage('ai', `🗣️ 第${currentStep}题：${nextQ}`);
-        sendBtn.disabled = false;
-        answerInput.disabled = false;
-        answerInput.focus();
-    }
+  if (currentStep === questionsList.length) {
+    currentStep = 4;
+    sendBtn.disabled = true; answerInput.disabled = true;
+    updateDots();
+    generateReport();
+  } else {
+    currentStep++;
+    updateDots();
+    await typeMsg('ai', `🗣️ 第${currentStep}题：${questionsList[currentStep-1]}`);
+    sendBtn.disabled = false; answerInput.disabled = false;
+    answerInput.focus();
+  }
 }
 
 function generateReport() {
-    const avgLogic = dimensionScores.logic / 3;
-    const avgProf = dimensionScores.profession / 3;
-    const avgAdapt = dimensionScores.adaptability / 3;
-    const avgComm = dimensionScores.communication / 3;
-    const totalAvgScore = Math.round(scoresPerAnswer.reduce((a,b)=>a+b,0) / scoresPerAnswer.length);
+  const avgL = dimensionScores.logic/3, avgP = dimensionScores.profession/3;
+  const avgA = dimensionScores.adaptability/3, avgC = dimensionScores.communication/3;
+  const total = Math.round(scoresPerAnswer.reduce((a,b)=>a+b,0)/scoresPerAnswer.length);
 
-    reportCardDiv.style.display = 'block';
-    const content = document.getElementById('reportContent');
-    content.innerHTML = `
-        <div class="score-display">
-            <div class="score-circle">
-                <span id="scoreNum">0</span>
-            </div>
-            <div class="score-label">${jobMap[currentJob].icon} ${jobMap[currentJob].name}</div>
-            <div style="font-size:0.85rem; color:#64748b; margin-top:4px;">${totalAvgScore>=80?'🌟 表现优秀，有潜力！':totalAvgScore>=65?'👍 不错，继续提升~':'📚 再加强实战与思考'}</div>
-        </div>
-        <div class="score-radar">
-            <canvas id="radarCanvas" style="width:100%; height:auto; max-width:280px; margin:0 auto; display:block;"></canvas>
-        </div>
-        <div class="dimension-rows">
-            <div style="font-weight:600; margin-bottom:10px;">📌 维度解析</div>
-            <div class="dim-row"><span class="dim-icon">🧠</span><span class="dim-name">逻辑表达</span><div class="dim-bar"><div class="dim-fill logic" id="bar-logic"></div></div><span class="dim-val" id="val-logic">0</span></div>
-            <div class="dim-row"><span class="dim-icon">🎯</span><span class="dim-name">专业匹配</span><div class="dim-bar"><div class="dim-fill profession" id="bar-prof"></div></div><span class="dim-val" id="val-prof">0</span></div>
-            <div class="dim-row"><span class="dim-icon">⚡</span><span class="dim-name">应变能力</span><div class="dim-bar"><div class="dim-fill adaptability" id="bar-adapt"></div></div><span class="dim-val" id="val-adapt">0</span></div>
-            <div class="dim-row"><span class="dim-icon">🗣️</span><span class="dim-name">沟通技巧</span><div class="dim-bar"><div class="dim-fill communication" id="bar-comm"></div></div><span class="dim-val" id="val-comm">0</span></div>
-        </div>
-        <div style="text-align:center; margin-top:14px; color:#64748b; font-size:0.82rem;">
-            💡 面试官建议：${totalAvgScore>=80?'多做实战项目，拓展行业视野。':totalAvgScore>=65?'回答时多引用STAR法则，量化成果。':'先梳理岗位核心能力，用真实案例打磨表达。'}
-        </div>
-    `;
+  reportScene.style.display = 'block';
+  document.getElementById('reportBody').innerHTML = `
+    <div class="score-ring-wrap">
+      <div class="score-ring">
+        <div class="score-num" id="scoreNum">0</div>
+        <div class="score-label">${jobMap[currentJob].icon} ${jobMap[currentJob].name}</div>
+      </div>
+    </div>
+    <div style="text-align:center; font-size:0.8rem; color:var(--text-dim); margin-bottom:14px;">
+      ${total>=80?'🌟 表现优秀，有潜力！':total>=65?'👍 不错，继续提升~':'📚 再加强实战与思考'}
+    </div>
+    <div style="max-width:300px; margin:0 auto 14px;">
+      <canvas id="radarCanvas" style="width:100%; height:auto; display:block;"></canvas>
+    </div>
+    <div class="dim-bars">
+      <div class="dim-item"><span class="dim-icon">🧠</span><span class="dim-name">逻辑表达</span><div class="dim-track"><div class="dim-fill l" id="bf-l"></div></div><span class="dim-val" id="bv-l">0</span></div>
+      <div class="dim-item"><span class="dim-icon">🎯</span><span class="dim-name">专业匹配</span><div class="dim-track"><div class="dim-fill p" id="bf-p"></div></div><span class="dim-val" id="bv-p">0</span></div>
+      <div class="dim-item"><span class="dim-icon">⚡</span><span class="dim-name">应变能力</span><div class="dim-track"><div class="dim-fill a" id="bf-a"></div></div><span class="dim-val" id="bv-a">0</span></div>
+      <div class="dim-item"><span class="dim-icon">🗣️</span><span class="dim-name">沟通技巧</span><div class="dim-track"><div class="dim-fill c" id="bf-c"></div></div><span class="dim-val" id="bv-c">0</span></div>
+    </div>
+    <div class="advice-box">
+      💡 面试官建议：${total>=80?'多做实战项目，拓展行业视野。':total>=65?'回答时多引用STAR法则，量化成果。':'先梳理岗位核心能力，用真实案例打磨表达。'}
+    </div>
+  `;
+  reportScene.scrollIntoView({ behavior:'smooth' });
 
-    reportCardDiv.scrollIntoView({ behavior: 'smooth' });
-
-    // 分数动画
-    setTimeout(() => {
-        const scoreEl = document.getElementById('scoreNum');
-        if (scoreEl) animateValue(scoreEl, 0, totalAvgScore, 1500);
-    }, 200);
-
-    // 进度条动画
-    setTimeout(() => {
-        ['logic','profession','adaptability','communication'].forEach(k => {
-            const bar = document.getElementById('bar-' + k);
-            const val = document.getElementById('val-' + k);
-            const target = Math.round(k === 'logic' ? avgLogic : k === 'profession' ? avgProf : k === 'adaptability' ? avgAdapt : avgComm);
-            if (bar) bar.style.width = target + '%';
-            if (val) animateValue(val, 0, target, 1200);
-        });
-    }, 400);
-
-    // 雷达图
-    setTimeout(() => {
-        const ctx = document.getElementById('radarCanvas')?.getContext('2d');
-        if (!ctx) return;
-        if (chartInstance) chartInstance.destroy();
-        chartInstance = new Chart(ctx, {
-            type: 'radar',
-            data: {
-                labels: ['逻辑表达', '专业匹配', '应变能力', '沟通技巧'],
-                datasets: [{
-                    label: '你的能力值',
-                    data: [avgLogic, avgProf, avgAdapt, avgComm],
-                    backgroundColor: 'rgba(0,102,204,0.15)',
-                    borderColor: '#4da6ff',
-                    borderWidth: 2,
-                    pointBackgroundColor: '#4da6ff',
-                    pointBorderColor: '#0a0e1a',
-                    pointBorderWidth: 2,
-                    pointRadius: 6,
-                    pointHoverRadius: 8,
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: true,
-                animation: { duration: 1500, easing: 'easeOutQuart' },
-                scales: {
-                    r: {
-                        beginAtZero: true, max: 100,
-                        ticks: { stepSize: 20, color: '#64748b', backdropColor: 'transparent', font: { size: 10 } },
-                        grid: { color: 'rgba(255,255,255,0.06)' },
-                        angleLines: { color: 'rgba(255,255,255,0.06)' },
-                        pointLabels: { color: '#cbd5e1', font: { size: 12 } }
-                    }
-                },
-                plugins: { legend: { labels: { color: '#8892b0', font: { size: 11 } } } }
-            }
-        });
-    }, 500);
-
-    // 高分撒花
-    if (totalAvgScore >= 75) {
-        setTimeout(launchConfetti, 800);
-    }
-    showToast('✨ 面试报告生成完毕！');
-}
-
-function startInterview() {
-    if (!currentJob) { typeMessage('ai', '⚠️ 请先点击上方任意岗位按钮选择面试类型~'); return; }
-    if (currentStep === 4) resetInterview();
-    if (currentStep > 0 && currentStep <= 3) { typeMessage('ai', '⏳ 面试已在进行中，请继续回答当前问题。'); return; }
-    clearChat(false);
-    currentStep = 1;
-    userAnswers = []; aiFeedbacks = []; scoresPerAnswer = [];
-    dimensionScores = { logic: 0, profession: 0, adaptability: 0, communication: 0 };
-    questionsList = [...questionBank[currentJob].questions];
-    updateProgress();
-    typeMessage('ai', `🎤 欢迎参加${jobMap[currentJob].icon} ${jobMap[currentJob].name} 岗位模拟面试，我将提问3个问题，请认真思考后回答。`);
-    setTimeout(() => {
-        typeMessage('ai', `第1题：${questionsList[0]}`);
-    }, 800);
-    sendBtn.disabled = false;
-    answerInput.disabled = false;
-    answerInput.focus();
-    reportCardDiv.style.display = 'none';
-}
-
-function resetInterview() {
-    currentStep = 0;
-    sendBtn.disabled = true;
-    answerInput.disabled = true;
-    clearChat(true);
-    reportCardDiv.style.display = 'none';
-    updateProgress();
-    if (currentJob) {
-        selectedJobDisplay.innerText = `已选：${jobMap[currentJob].icon} ${jobMap[currentJob].name}，点击「开始面试」即可`;
-    } else {
-        selectedJobDisplay.innerText = '未选择，点击上方岗位开始面试';
-    }
-}
-
-jobBtns.forEach(btn => {
-    btn.addEventListener('click', () => {
-        const jobVal = btn.getAttribute('data-job');
-        if (currentStep > 0 && currentStep < 4) {
-            if (confirm('切换岗位会中断当前面试，确定吗？')) {
-                currentJob = jobVal;
-                resetInterview();
-            } else return;
-        } else {
-            currentJob = jobVal;
-            resetInterview();
-        }
-        jobBtns.forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        selectedJobDisplay.innerText = `已选：${jobMap[currentJob].icon} ${jobMap[currentJob].name}，点击「开始面试」即可`;
+  setTimeout(() => { const el = document.getElementById('scoreNum'); if(el) animateNum(el,0,total,1500); }, 200);
+  setTimeout(() => {
+    const map = { l:avgL, p:avgP, a:avgA, c:avgC };
+    Object.keys(map).forEach(k => {
+      const v = Math.round(map[k]);
+      const bar = document.getElementById('bf-'+k);
+      const val = document.getElementById('bv-'+k);
+      if(bar) bar.style.width = v+'%';
+      if(val) animateNum(val,0,v,1200);
     });
+  }, 400);
+
+  setTimeout(() => {
+    const ctx = document.getElementById('radarCanvas')?.getContext('2d');
+    if(!ctx) return;
+    if(chartInstance) chartInstance.destroy();
+    chartInstance = new Chart(ctx, {
+      type: 'radar',
+      data: {
+        labels: ['逻辑表达','专业匹配','应变能力','沟通技巧'],
+        datasets: [{
+          label: '你的能力值',
+          data: [avgL,avgP,avgA,avgC],
+          backgroundColor: 'rgba(0,212,170,0.12)',
+          borderColor: '#00d4aa',
+          borderWidth: 2,
+          pointBackgroundColor: '#00d4aa',
+          pointBorderColor: '#05070a',
+          pointBorderWidth: 2,
+          pointRadius: 5,
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: true,
+        animation: { duration: 1400, easing: 'easeOutQuart' },
+        scales: {
+          r: {
+            beginAtZero: true, max: 100, ticks: { stepSize: 20, color: '#475569', backdropColor: 'transparent', font:{size:9} },
+            grid: { color: 'rgba(255,255,255,0.05)' },
+            angleLines: { color: 'rgba(255,255,255,0.05)' },
+            pointLabels: { color: '#64748b', font:{size:11} }
+          }
+        },
+        plugins: { legend: { labels: { color: '#475569', font:{size:10} } } }
+      }
+    });
+  }, 500);
+
+  if (total >= 75) setTimeout(confetti, 700);
+  toast('✨ 面试报告生成完毕！');
+}
+
+async function startInterview() {
+  if (!currentJob) { await typeMsg('ai','⚠️ 请先选择你的角色~'); return; }
+  if (currentStep === 4) resetAll();
+  if (currentStep > 0 && currentStep <= 3) { await typeMsg('ai','⏳ 面试已在进行中，请继续回答。'); return; }
+  clearChat(false);
+  currentStep = 1;
+  userAnswers=[]; aiFeedbacks=[]; scoresPerAnswer=[];
+  dimensionScores = { logic:0, profession:0, adaptability:0, communication:0 };
+  questionsList = [...questionBank[currentJob].questions];
+  updateDots();
+  await typeMsg('ai', `🎤 欢迎参加${jobMap[currentJob].icon} ${jobMap[currentJob].name}岗位模拟面试，我将提问3个问题，请认真思考后回答。`);
+  setTimeout(async () => {
+    await typeMsg('ai', `第1题：${questionsList[0]}`);
+  }, 600);
+  sendBtn.disabled = false; answerInput.disabled = false;
+  answerInput.focus();
+  reportScene.style.display = 'none';
+}
+
+function resetAll() {
+  currentStep = 0; currentJob = null;
+  sendBtn.disabled = true; answerInput.disabled = true;
+  clearChat(true); updateDots();
+  reportScene.style.display = 'none';
+  document.querySelectorAll('.role-card').forEach(c => c.classList.remove('selected'));
+  roleHint.textContent = '点击上方角色，开始你的面试之旅';
+  startBtn.style.display = 'inline-block';
+}
+
+answerInput.addEventListener('keypress', e => {
+  if (e.key === 'Enter' && !sendBtn.disabled && !answerInput.disabled) submitAnswer();
 });
 
-startBtn.addEventListener('click', startInterview);
-resetBtn.addEventListener('click', resetInterview);
-sendBtn.addEventListener('click', handleAnswer);
-answerInput.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter' && !sendBtn.disabled && !answerInput.disabled) handleAnswer();
-});
-
-document.getElementById('shareImageBtn')?.addEventListener('click', async () => {
-    const reportElem = document.getElementById('reportContent');
-    if (!reportElem) return;
-    try {
-        const canvas = await html2canvas(reportElem, { scale: 2, backgroundColor: '#0a0e1a' });
-        const link = document.createElement('a');
-        link.download = `面试报告_${jobMap[currentJob]?.name || 'AI'}.png`;
-        link.href = canvas.toDataURL();
-        link.click();
-        showToast('📸 截图已保存！');
-    } catch(e) {
-        alert('截图生成失败，可手动截图');
-    }
-});
-
-document.getElementById('newInterviewBtn')?.addEventListener('click', () => resetInterview());
-
-resetInterview();
+async function shareReport() {
+  const el = document.getElementById('reportBody');
+  if (!el) return;
+  try {
+    const canvas = await html2canvas(el, { scale: 2, backgroundColor: '#0c1020' });
+    const a = document.createElement('a');
+    a.download = `面试报告_${jobMap[currentJob]?.name||'AI'}.png`;
+    a.href = canvas.toDataURL(); a.click();
+    toast('📸 截图已保存！');
+  } catch(e) { alert('截图生成失败'); }
+}
 </script>
 </body>
 </html>

@@ -4,8 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>AI面试模拟器 | 腾讯青科实训营</title>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
   :root {
     --bg: #05070a;
@@ -668,7 +666,7 @@ const questionBank = {
 let currentJob = null, currentStep = 0, questionsList = [];
 let userAnswers = [], aiFeedbacks = [], scoresPerAnswer = [];
 let dimensionScores = { logic:0, profession:0, adaptability:0, communication:0 };
-let chartInstance = null;
+<empty string>
 
 const chatBox = document.getElementById('chatBox');
 const answerInput = document.getElementById('answerInput');
@@ -998,39 +996,118 @@ function generateReport() {
   }, 400);
 
   setTimeout(() => {
-    const ctx = document.getElementById('radarCanvas')?.getContext('2d');
-    if(!ctx) return;
-    if(chartInstance) chartInstance.destroy();
-    chartInstance = new Chart(ctx, {
-      type: 'radar',
-      data: {
-        labels: ['逻辑表达','专业匹配','应变能力','沟通技巧'],
-        datasets: [{
-          label: '你的能力值',
-          data: [avgL,avgP,avgA,avgC],
-          backgroundColor: 'rgba(0,212,170,0.12)',
-          borderColor: '#00d4aa',
-          borderWidth: 2,
-          pointBackgroundColor: '#00d4aa',
-          pointBorderColor: '#05070a',
-          pointBorderWidth: 2,
-          pointRadius: 5,
-        }]
-      },
-      options: {
-        responsive: true, maintainAspectRatio: true,
-        animation: { duration: 1400, easing: 'easeOutQuart' },
-        scales: {
-          r: {
-            beginAtZero: true, max: 100, ticks: { stepSize: 20, color: '#475569', backdropColor: 'transparent', font:{size:9} },
-            grid: { color: 'rgba(255,255,255,0.05)' },
-            angleLines: { color: 'rgba(255,255,255,0.05)' },
-            pointLabels: { color: '#64748b', font:{size:11} }
-          }
-        },
-        plugins: { legend: { labels: { color: '#475569', font:{size:10} } } }
+    const canvas = document.getElementById('radarCanvas');
+    if(!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const dpr = window.devicePixelRatio || 1;
+    const size = 280;
+    canvas.width = size * dpr;
+    canvas.height = size * dpr;
+    canvas.style.width = size + 'px';
+    canvas.style.height = size + 'px';
+    ctx.scale(dpr, dpr);
+    
+    const cx = size/2, cy = size/2, r = 100;
+    const labels = ['逻辑表达','专业匹配','应变能力','沟通技巧'];
+    const values = [avgL, avgP, avgA, avgC];
+    const N = labels.length;
+    
+    // 绘制动画
+    let animStart = null;
+    const duration = 1400;
+    function drawRadar(ts) {
+      if (!animStart) animStart = ts;
+      const progress = Math.min(1, (ts - animStart) / duration);
+      const ease = 1 - Math.pow(1 - progress, 3); // easeOutCubic
+      
+      ctx.clearRect(0, 0, size, size);
+      
+      // 背景网格
+      for (let level = 1; level <= 5; level++) {
+        ctx.beginPath();
+        const lr = r * level / 5;
+        for (let i = 0; i < N; i++) {
+          const ang = -Math.PI/2 + i * 2*Math.PI/N;
+          const px = cx + lr * Math.cos(ang);
+          const py = cy + lr * Math.sin(ang);
+          i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+        }
+        ctx.closePath();
+        ctx.strokeStyle = 'rgba(255,255,255,0.07)';
+        ctx.stroke();
       }
-    });
+      
+      // 轴线
+      for (let i = 0; i < N; i++) {
+        const ang = -Math.PI/2 + i * 2*Math.PI/N;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(cx + r * Math.cos(ang), cy + r * Math.sin(ang));
+        ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+        ctx.stroke();
+      }
+      
+      // 数据区域
+      const animVals = values.map(v => v * ease);
+      ctx.beginPath();
+      for (let i = 0; i < N; i++) {
+        const ang = -Math.PI/2 + i * 2*Math.PI/N;
+        const vr = r * animVals[i] / 100;
+        const px = cx + vr * Math.cos(ang);
+        const py = cy + vr * Math.sin(ang);
+        i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+      }
+      ctx.closePath();
+      ctx.fillStyle = 'rgba(0,212,170,0.12)';
+      ctx.fill();
+      ctx.strokeStyle = '#00d4aa';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      
+      // 数据点
+      for (let i = 0; i < N; i++) {
+        const ang = -Math.PI/2 + i * 2*Math.PI/N;
+        const vr = r * animVals[i] / 100;
+        const px = cx + vr * Math.cos(ang);
+        const py = cy + vr * Math.sin(ang);
+        ctx.beginPath();
+        ctx.arc(px, py, 4, 0, 2*Math.PI);
+        ctx.fillStyle = '#00d4aa';
+        ctx.fill();
+        ctx.strokeStyle = '#05070a';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+      }
+      
+      // 刻度标签(隐藏刻度数字，只显示轴标签)
+      // 标签
+      ctx.fillStyle = '#64748b';
+      ctx.font = '11px "PingFang SC","Microsoft YaHei",sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      for (let i = 0; i < N; i++) {
+        const ang = -Math.PI/2 + i * 2*Math.PI/N;
+        const lx = cx + (r + 28) * Math.cos(ang);
+        const ly = cy + (r + 28) * Math.sin(ang);
+        ctx.fillText(labels[i], lx, ly);
+      }
+      
+      // 分数标注
+      for (let i = 0; i < N; i++) {
+        const ang = -Math.PI/2 + i * 2*Math.PI/N;
+        const vr = r * animVals[i] / 100;
+        const px = cx + vr * Math.cos(ang);
+        const py = cy + vr * Math.sin(ang);
+        ctx.fillStyle = '#00d4aa';
+        ctx.font = 'bold 10px "PingFang SC","Microsoft YaHei",sans-serif';
+        ctx.fillText(Math.round(animVals[i]), px, py - 14);
+      }
+      
+      if (progress < 1) {
+        requestAnimationFrame(drawRadar);
+      }
+    }
+    requestAnimationFrame(drawRadar);
   }, 500);
 
   if (total >= 75) setTimeout(confetti, 700);
@@ -1074,11 +1151,30 @@ async function shareReport() {
   const el = document.getElementById('reportBody');
   if (!el) return;
   try {
-    const canvas = await html2canvas(el, { scale: 2, backgroundColor: '#0c1020' });
-    const a = document.createElement('a');
-    a.download = `面试报告_${jobMap[currentJob]?.name||'AI'}.png`;
-    a.href = canvas.toDataURL(); a.click();
-    toast('📸 截图已保存！');
+    // 复制样式到内联，确保SVG渲染正确
+    const styleContent = document.querySelector('style').textContent;
+    const html = `<style>${styleContent} body{margin:0;background:#0c1020} .score-ring-wrap{transform:none!important}</style><div style="background:#0c1020;padding:16px;width:360px">${el.innerHTML}</div>`;
+    const data = `<svg xmlns="http://www.w3.org/2000/svg" width="360" height="${el.offsetHeight + 32}"><foreignObject width="100%" height="100%"><div xmlns="http://www.w3.org/1999/xhtml">${html}</div></foreignObject></svg>`;
+    const img = new Image();
+    const svg = new Blob([data], {type: 'image/svg+xml;charset=utf-8'});
+    const url = URL.createObjectURL(svg);
+    img.onload = function() {
+      const canvas = document.createElement('canvas');
+      canvas.width = 720;
+      canvas.height = (el.offsetHeight + 32) * 2;
+      const ctx2 = canvas.getContext('2d');
+      ctx2.fillStyle = '#0c1020';
+      ctx2.fillRect(0, 0, canvas.width, canvas.height);
+      ctx2.drawImage(img, 0, 0);
+      const a = document.createElement('a');
+      a.download = `面试报告_${(jobMap[currentJob]||{name:'AI'}).name}.png`;
+      a.href = canvas.toDataURL();
+      a.click();
+      URL.revokeObjectURL(url);
+      toast('📸 截图已保存！');
+    };
+    img.onerror = function() { alert('截图生成失败，请尝试截图后分享'); };
+    img.src = url;
   } catch(e) { alert('截图生成失败'); }
 }
 </script>

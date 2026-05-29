@@ -282,6 +282,48 @@
     30% { transform: translateY(-7px); opacity: 1; }
   }
 
+  /* 面试官点评卡片 */
+  .feedback-card {
+    align-self: flex-start;
+    max-width: 92%;
+    background: linear-gradient(135deg, rgba(0,212,170,0.08), rgba(0,168,255,0.05));
+    border: 1px solid rgba(0,212,170,0.18);
+    border-radius: 16px;
+    padding: 14px 16px;
+    margin: 4px 0 10px 0;
+    animation: msgIn 0.5s cubic-bezier(.34,1.56,.64,1);
+  }
+  .feedback-card.c-grade { border-color: rgba(255,90,90,0.25); background: linear-gradient(135deg, rgba(255,90,90,0.08), rgba(255,150,50,0.04)); }
+  .feedback-card.b-grade { border-color: rgba(255,200,50,0.2); background: linear-gradient(135deg, rgba(255,200,50,0.06), rgba(255,150,30,0.03)); }
+  .feedback-card.a-grade { border-color: rgba(0,168,255,0.2); background: linear-gradient(135deg, rgba(0,168,255,0.08), rgba(0,120,255,0.04)); }
+  .feedback-card.s-grade { border-color: rgba(0,212,170,0.22); }
+  .feedback-header { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+  .feedback-badge { font-size:1.1rem; font-weight:800; width:40px; height:40px; display:flex; align-items:center; justify-content:center; border-radius:10px; flex-shrink:0; }
+  .feedback-badge.s { background:rgba(0,212,170,0.18); color:var(--primary); }
+  .feedback-badge.a { background:rgba(0,168,255,0.18); color:var(--accent); }
+  .feedback-badge.b { background:rgba(255,200,50,0.14); color:#ffd700; }
+  .feedback-badge.c { background:rgba(255,90,90,0.14); color:#ff5a5a; }
+  .feedback-title { font-size:0.95rem; font-weight:600; }
+  .feedback-sub { font-size:0.75rem; color:var(--text-dim); margin-top:2px; }
+  .feedback-section { margin-top:10px; }
+  .feedback-section-title { font-size:0.78rem; font-weight:600; margin-bottom:5px; display:flex; align-items:center; gap:5px; }
+  .feedback-card.s-grade .feedback-section-title { color:var(--primary); }
+  .feedback-card.a-grade .feedback-section-title { color:var(--accent); }
+  .feedback-card.b-grade .feedback-section-title { color:#ffd700; }
+  .feedback-card.c-grade .feedback-section-title { color:#ff5a5a; }
+  .feedback-list { list-style:none; padding:0; margin:0; }
+  .feedback-list li { font-size:0.82rem; color:#cbd5e1; line-height:1.7; padding-left:14px; position:relative; }
+  .feedback-list li::before { content:''; position:absolute; left:0; top:9px; width:5px; height:5px; border-radius:50%; background:var(--primary); }
+  .feedback-card.b-grade .feedback-list li::before { background:#ffd700; }
+  .feedback-card.c-grade .feedback-list li::before { background:#ff5a5a; }
+  .feedback-card.a-grade .feedback-list li::before { background:var(--accent); }
+  .feedback-list li + li { margin-top:3px; }
+  .feedback-score-tag { display:inline-block; padding:2px 8px; border-radius:6px; font-size:0.72rem; font-weight:600; margin-left:auto; }
+  .feedback-score-tag.s { background:rgba(0,212,170,0.15); color:var(--primary); }
+  .feedback-score-tag.a { background:rgba(0,168,255,0.12); color:var(--accent); }
+  .feedback-score-tag.b { background:rgba(255,200,50,0.12); color:#ffd700; }
+  .feedback-score-tag.c { background:rgba(255,90,90,0.12); color:#ff5a5a; }
+
   /* 输入区 */
   .input-area {
     display: flex; gap: 10px;
@@ -710,23 +752,35 @@ function selectRole(el, job) {
 function simulateEval(jobKey, qIdx, ans) {
   let score = 60;
   const len = ans.trim().length;
-  if (len > 100) score += 18;
-  else if (len > 60) score += 12;
-  else if (len > 30) score += 6;
-  else if (len < 10) score -= 22;
+  if (len > 120) score += 20;
+  else if (len > 80) score += 14;
+  else if (len > 50) score += 8;
+  else if (len > 30) score += 4;
+  else if (len < 10) score -= 24;
+  else if (len < 20) score -= 10;
   const kw = {
-    pm: ['用户','数据','优先级','迭代','需求','mvp','转化','痛点','场景','体验'],
-    hr: ['业务','沟通','共情','ai','数据','文化','冲突','人才','组织','战略'],
-    dev: ['算法','性能','重构','测试','架构','debug','协作','扩展','维护','优化']
+    pm: ['用户','数据','优先级','迭代','需求','mvp','转化','痛点','场景','体验','流程','画像','漏斗','留存','北极星'],
+    hr: ['业务','沟通','共情','ai','数据','文化','冲突','人才','组织','战略','绩效','激励','梯队','离职','OKR'],
+    dev: ['算法','性能','重构','测试','架构','debug','协作','扩展','维护','优化','缓存','并发','安全','接口','复杂度']
   };
   let mc = 0;
-  (kw[jobKey]||[]).forEach(k => { if(ans.toLowerCase().includes(k.toLowerCase())) mc++; });
-  score += Math.min(22, mc*4);
-  score = Math.min(98, Math.max(28, Math.round(score)));
-  let cmt = score>=88?"回答很出色，逻辑清晰有深度！":score>=75?"不错，抓住了要点，再丰富一下细节会更棒。":score>=60?"基本回答但缺乏亮点，建议结合具体案例。":"回答略显单薄，需要更结构化思考。";
+  const jobKw = kw[jobKey]||[];
+  jobKw.forEach(k => { if(ans.toLowerCase().includes(k.toLowerCase())) mc++; });
+  score += Math.min(26, mc*3);
+  if (/首先|第一步|1\.|一、/.test(ans)) score += 3;
+  if (/其次|然后|第二步|2\.|二、/.test(ans)) score += 3;
+  if (/最后|总结|综上所述|总之/.test(ans)) score += 3;
+  if (/\d+%|\d+个|\d+万|\d+亿|\d+ms|\d+s/.test(ans)) score += 3;
+  score = Math.min(98, Math.max(25, Math.round(score)));
+  const fb = generateFeedback(score, jobKey, qIdx, ans, mc, len);
   return {
     score,
-    comment: cmt,
+    comment: fb.summary,
+    grade: fb.grade,
+    summary: fb.summary,
+    highlights: fb.highlights,
+    weaknesses: fb.weaknesses,
+    tips: fb.tips,
     dims: {
       logic: Math.min(98,Math.max(30,60+(score-60)*0.45+(Math.random()*8-4))),
       profession: Math.min(98,Math.max(30,60+(score-60)*0.5+(Math.random()*6-3))),
@@ -734,6 +788,119 @@ function simulateEval(jobKey, qIdx, ans) {
       communication: Math.min(98,Math.max(30,65+(score-65)*0.3+(Math.random()*8-4)))
     }
   };
+}
+
+function generateFeedback(score, jobKey, qIdx, ans, kwCount, len) {
+  const grade = score>=88?'S':score>=75?'A':score>=60?'B':'C';
+  const pools = {
+    S: {
+      summary: ['回答非常出色，思路清晰且具备深度！','表现惊艳，展现了扎实的专业功底。','逻辑严密，论证充分，令人印象深刻。','作为面试官，我对这个回答很满意。'],
+      highlights: ['观点鲜明，直击问题核心','结构化表达优秀，层次分明','结合了实际场景，具有很强的落地性','用词精准，体现了专业素养','有数据或案例支撑，说服力很强'],
+      weaknesses: ['几乎找不到明显不足，如果硬要说，可以在结尾补充一个反向思考。'],
+      tips: ['继续保持这种思考深度，面试实战中也这么发挥即可。','你已经具备了该岗位的优秀潜质，自信表达就好。']
+    },
+    A: {
+      summary: ['整体不错，抓住了核心要点。','回答有亮点，逻辑也基本通顺。','展现了一定的专业积累，继续打磨会更出彩！','是个合格的回答，距离优秀只差一步。'],
+      highlights: ['核心观点表达清楚','有一定的结构化意识','关键词匹配度良好','对问题理解没有偏差'],
+      weaknesses: ['细节展开不够充分','缺少具体案例或数据支撑','结尾收束略显仓促','部分论点之间衔接可以更自然'],
+      tips: ['尝试用"STAR法则"组织回答','多补充1-2个量化指标或真实案例','在结尾做30字以内的精炼总结','回答前先花5秒在脑中画个思维导图']
+    },
+    B: {
+      summary: ['回答基本及格，但亮点不足。','思路有了雏形，还需要进一步打磨。','能听懂问题，但深度有待加强。','中规中矩，缺少让面试官记住的点。'],
+      highlights: ['对问题有基本的理解','提到了少量相关概念','态度认真，有尝试回答'],
+      weaknesses: ['内容较为单薄，缺乏展开','逻辑链条不够完整','缺少岗位关键词','几乎没有任何案例或数据','表达有些口语化，不够专业'],
+      tips: ['回答前先花10秒在脑中列个提纲','每个观点尽量配一个实例','主动使用岗位专业术语','把"我觉得"换成"基于...分析"','尝试用"首先-其次-最后"三段式']
+    },
+    C: {
+      summary: ['回答比较薄弱，需要大幅加强。','目前的表现距离岗位要求还有差距。','建议系统学习后再来挑战。','这次发挥不太理想，别灰心，复盘后再战。'],
+      highlights: ['至少尝试了回答问题','没有回避问题，态度可嘉'],
+      weaknesses: ['内容过于简短，信息密度极低','完全缺少结构化思考','没有体现岗位认知','回答偏离问题核心','缺乏任何专业术语或案例'],
+      tips: ['先学习该岗位常见的面试题库','掌握STAR/金字塔等表达框架','多看优秀回答范例并模仿','下次回答前先深呼吸，理清思路','从"是什么-为什么-怎么做"三层展开']
+    }
+  };
+  const jobTips = {
+    pm: {
+      S: ['可以尝试提及A/B测试或埋点方案来加分。'],
+      A: ['补充用户画像或使用路径图会更出彩。',' Mention一下MVP验证思路。'],
+      B: ['多从"用户需求→产品方案→数据验证"三段论来组织。','试着用具体的产品案例来论证。'],
+      C: ['先理解产品经理的核心能力是"发现问题+设计解决方案+推动落地"。']
+    },
+    hr: {
+      S: ['如果能结合劳动法规或组织发展理论会更专业。'],
+      A: ['多使用HR专业术语，如人才盘点、胜任力模型等。','结合实际业务场景给出方案。'],
+      B: ['HR回答要有"人"味，也要有"数"据。','从组织、团队、个人三个层面展开。'],
+      C: ['HR的核心是理解业务+赋能人才，先建立这个认知框架。']
+    },
+    dev: {
+      S: ['提及复杂度分析或性能瓶颈排查过程会是亮点。'],
+      A: ['补充技术选型理由和trade-off思考。','给出伪代码或架构图描述。'],
+      B: ['技术回答要有"what-why-how"三层结构。','多提测试、监控、容灾等工程化意识。'],
+      C: ['先掌握技术问题的标准回答模板，再逐步加入个人理解。']
+    }
+  };
+  const pick = (arr, n=1) => {
+    const shuffled = arr.slice().sort(()=>Math.random()-0.5);
+    return shuffled.slice(0, Math.min(n, shuffled.length));
+  };
+  const g = pools[grade];
+  const jt = (jobTips[jobKey]||{})[grade] || [];
+  const summary = pick(g.summary, 1)[0];
+  let highlights = pick(g.highlights, grade==='S'?2:grade==='A'?2:1);
+  let weaknesses = pick(g.weaknesses, grade==='C'?3:grade==='B'?2:1);
+  let tips = pick(g.tips, 2);
+  if (jt.length) tips = tips.concat(pick(jt, 1));
+  if (len < 25 && grade !== 'C') {
+    weaknesses.push('回答篇幅过短，难以充分展示思考深度');
+    tips.push('建议每题至少写50字以上，给面试官足够的信息量');
+  }
+  if (kwCount >= 5 && grade !== 'S') {
+    highlights.push('专业关键词使用丰富，体现了岗位敏感度');
+  }
+  if (kwCount <= 1 && grade !== 'C') {
+    weaknesses.push('岗位关键词使用太少，建议多融入专业术语');
+  }
+  if (!/\d/.test(ans) && score < 85) {
+    weaknesses.push('缺少量化表达，"提升很多"不如"提升35%"有说服力');
+    tips.push('尽可能用数字、百分比、时间周期来支撑观点');
+  }
+  return { grade, summary, highlights, weaknesses, tips };
+}
+
+function renderFeedbackCard(ev) {
+  const gradeConfig = {
+    S: { emoji:'🏆', cls:'s', label:'优秀' },
+    A: { emoji:'🌟', cls:'a', label:'良好' },
+    B: { emoji:'📋', cls:'b', label:'及格' },
+    C: { emoji:'📚', cls:'c', label:'待加强' }
+  };
+  const cfg = gradeConfig[ev.grade];
+  const card = document.createElement('div');
+  card.className = `feedback-card ${cfg.cls}-grade`;
+  card.innerHTML = `
+    <div class="feedback-header">
+      <div class="feedback-badge ${cfg.cls}">${ev.score}</div>
+      <div style="flex:1;min-width:0">
+        <div class="feedback-title">${cfg.emoji} 面试官点评 · ${cfg.label}</div>
+        <div class="feedback-sub">第${currentStep}题 · ${jobMap[currentJob].name}</div>
+      </div>
+      <div class="feedback-score-tag ${cfg.cls}">${ev.score}分</div>
+    </div>
+    <div style="font-size:0.88rem;color:#e2e8f0;margin-bottom:10px;line-height:1.6;">${ev.summary}</div>
+    <div class="feedback-section">
+      <div class="feedback-section-title">✅ 亮点</div>
+      <ul class="feedback-list">${ev.highlights.map(h=>`<li>${h}</li>`).join('')}</ul>
+    </div>
+    <div class="feedback-section">
+      <div class="feedback-section-title">⚠️ 不足</div>
+      <ul class="feedback-list">${ev.weaknesses.map(w=>`<li>${w}</li>`).join('')}</ul>
+    </div>
+    <div class="feedback-section">
+      <div class="feedback-section-title" style="color:var(--accent)">💡 建议</div>
+      <ul class="feedback-list">${ev.tips.map(t=>`<li>${t}</li>`).join('')}</ul>
+    </div>
+  `;
+  chatBox.appendChild(card);
+  chatBox.scrollTop = chatBox.scrollHeight;
 }
 
 function animateNum(el, from, to, dur) {
@@ -769,9 +936,9 @@ async function submitAnswer() {
   dimensionScores.adaptability += ev.dims.adaptability;
   dimensionScores.communication += ev.dims.communication;
 
-  const fb = `📝 点评：${ev.comment} (本题得分 ${ev.score})`;
-  aiFeedbacks.push(fb);
-  await typeMsg('ai', `第${currentStep}题回答完毕。${fb}`);
+  aiFeedbacks.push(`第${currentStep}题: ${ev.summary} (${ev.score}分)`);
+  await typeMsg('ai', `第${currentStep}题回答完毕，正在生成点评...`);
+  renderFeedbackCard(ev);
 
   if (currentStep === questionsList.length) {
     currentStep = 4;

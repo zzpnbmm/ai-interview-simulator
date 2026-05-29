@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>AI面试模拟器 | 腾讯青科实训营</title>
+    <!-- Chart.js 雷达图 -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <!-- html2canvas 生成分享图 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            background: linear-gradient(145deg, #f0f2f5 0%, #e6ecf3 100%);
+            font-family: 'Segoe UI', 'PingFang SC', Roboto, 'Helvetica Neue', sans-serif;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 780px;
+            margin: 0 auto;
+        }
+        /* 卡片 */
+        .card {
+            background: rgba(255,255,255,0.96);
+            backdrop-filter: blur(0px);
+            border-radius: 32px;
+            box-shadow: 0 20px 35px -12px rgba(0,0,0,0.15);
+            padding: 24px 22px;
+            margin-bottom: 24px;
+            transition: all 0.2s;
+            border: 1px solid rgba(255,255,255,0.5);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 16px;
+        }
+        .header h1 {
+            font-size: 1.9rem;
+            background: linear-gradient(135deg, #0066CC, #00A1E0);
+            background-clip: text;
+            -webkit-background-clip: text;
+            color: transparent;
+            letter-spacing: -0.3px;
+        }
+        .badge {
+            background: #EFF6FF;
+            color: #0066CC;
+            padding: 4px 12px;
+            border-radius: 40px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            display: inline-block;
+            margin-top: 8px;
+        }
+        .job-selector {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin: 20px 0 12px;
+            justify-content: center;
+        }
+        .job-btn {
+            background: #f3f4f6;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 60px;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: 0.2s;
+            color: #1f2937;
+        }
+        .job-btn.active {
+            background: #0066CC;
+            color: white;
+            box-shadow: 0 6px 12px -8px #0066CC;
+        }
+        .chat-area {
+            background: #f9fafb;
+            border-radius: 28px;
+            padding: 20px;
+            min-height: 320px;
+            max-height: 460px;
+            overflow-y: auto;
+            margin: 20px 0;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        .message {
+            display: flex;
+            flex-direction: column;
+            max-width: 85%;
+        }
+        .message.ai {
+            align-items: flex-start;
+        }
+        .message.user {
+            align-items: flex-end;
+            align-self: flex-end;
+        }
+        .bubble {
+            padding: 12px 18px;
+            border-radius: 24px;
+            font-size: 0.95rem;
+            line-height: 1.4;
+            word-break: break-word;
+        }
+        .ai .bubble {
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-bottom-left-radius: 4px;
+            color: #1e293b;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+        .user .bubble {
+            background: #0066CC;
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+        .feedback {
+            font-size: 0.7rem;
+            margin-top: 4px;
+            color: #6b7280;
+            padding-left: 12px;
+        }
+        .input-group {
+            display: flex;
+            gap: 12px;
+            margin-top: 12px;
+        }
+        #answerInput {
+            flex: 1;
+            padding: 12px 18px;
+            border: 1px solid #d1d5db;
+            border-radius: 60px;
+            font-size: 0.95rem;
+            outline: none;
+            transition: 0.2s;
+            font-family: inherit;
+        }
+        #answerInput:focus {
+            border-color: #0066CC;
+            box-shadow: 0 0 0 2px rgba(0,102,204,0.2);
+        }
+        button {
+            background: #0066CC;
+            color: white;
+            border: none;
+            padding: 0 22px;
+            border-radius: 60px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.2s;
+            font-size: 0.9rem;
+        }
+        button:active {
+            transform: scale(0.96);
+        }
+        button:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+        }
+        .report-card {
+            margin-top: 20px;
+            text-align: center;
+        }
+        .score-radar {
+            max-width: 280px;
+            margin: 20px auto;
+        }
+        .share-btn {
+            background: #0b2b3b;
+            margin-top: 16px;
+            padding: 10px 18px;
+        }
+        .restart-btn {
+            background: #4b5563;
+            margin-left: 12px;
+        }
+        .flex-between {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        hr {
+            margin: 16px 0;
+            border: none;
+            border-top: 1px solid #e2e8f0;
+        }
+        footer {
+            text-align: center;
+            font-size: 0.7rem;
+            color: #5b6e8c;
+        }
+        @media (max-width: 550px) {
+            .card {
+                padding: 18px;
+            }
+            .bubble {
+                font-size: 0.85rem;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="card header">
+        <h1>🎙️ AI面试模拟器</h1>
+        <div class="badge">✨ 腾讯青科实训营 · 未来HR挑战 ✨</div>
+        <div style="font-size: 0.8rem; margin-top: 8px; color: #4b5563;">选择岗位，AI面试官1v1对话，最终生成能力雷达图</div>
+    </div>
+
+    <div class="card">
+        <div style="font-weight: 600; margin-bottom: 12px;">📌 1. 选择面试岗位</div>
+        <div class="job-selector" id="jobSelector">
+            <button data-job="pm" class="job-btn">📊 产品经理</button>
+            <button data-job="hr" class="job-btn">👥 HR 专员</button>
+            <button data-job="dev" class="job-btn">💻 软件开发工程师</button>
+        </div>
+        <div id="selectedJobDisplay" style="font-size: 0.8rem; color: #0066CC; text-align: center; margin-top: 5px;">未选择，点击上方岗位开始面试</div>
+    </div>
+
+    <div class="card" id="interviewCard">
+        <div class="flex-between">
+            <span style="font-weight: 600;">💬 面试间</span>
+            <button id="resetInterviewBtn" style="background:#e5e7eb; color:#374151; padding: 6px 16px;">🔄 重置面试</button>
+        </div>
+        <div class="chat-area" id="chatArea">
+            <div class="message ai">
+                <div class="bubble">👋 你好！我是你的AI面试官。请先在上方选择一个岗位，然后点击「开始面试」按钮，我会根据岗位问你3个专业问题～</div>
+            </div>
+        </div>
+        <div class="input-group">
+            <input type="text" id="answerInput" placeholder="输入你的回答..." autocomplete="off" disabled>
+            <button id="sendBtn" disabled>发送回答</button>
+        </div>
+        <div style="margin-top: 12px; text-align: center;">
+            <button id="startInterviewBtn" style="background:#10b981; padding: 8px 28px;">🚀 开始面试</button>
+        </div>
+    </div>
+
+    <div class="card" id="reportCard" style="display: none;">
+        <div style="font-weight: 700; font-size: 1.2rem;">📈 面试报告</div>
+        <div id="reportContent">
+            <div style="text-align: center;">加载中...</div>
+        </div>
+        <div style="display: flex; gap: 12px; justify-content: center; margin-top: 10px;">
+            <button id="shareImageBtn" class="share-btn">📸 生成分享卡片</button>
+            <button id="newInterviewBtn" class="restart-btn">🔄 重新面试</button>
+        </div>
+        <div id="sharePreview" style="margin-top: 20px;"></div>
+    </div>
+    <footer>⚡ 模拟AI面试官 · 基于岗位动态生成问题与点评 · 最终得分生成雷达图</footer>
+</div>
+
+<script>
+    // ---------- 模拟AI面试官核心逻辑 ----------
+    // 岗位映射
+    const jobMap = {
+        pm: { name: "产品经理", icon: "📊" },
+        hr: { name: "HR专员", icon: "👥" },
+        dev: { name: "软件开发工程师", icon: "💻" }
+    };
+    
+    // 为不同岗位预置问题模板 + 评分引导 (AI 会根据回答动态微调点评)
+    const questionBank = {
+        pm: {
+            questions: [
+                "你最喜欢的一款互联网产品是什么？如果让你迭代一个功能，你会改哪里？",
+                "假设开发资源严重不足，老板却要求两周上线新功能，你如何权衡需求优先级？",
+                "用户反馈你的产品核心路径太复杂，转化率下降，你准备怎么分析并解决？"
+            ],
+            evalWeights: { logic: 0.35, profession: 0.35, adaptability: 0.2, communication: 0.1 }
+        },
+        hr: {
+            questions: [
+                "你认为未来HR最核心的能力是什么？请结合业务和AI说一下你的看法。",
+                "假如部门负责人和一位高潜员工发生激烈冲突，你作为HRBP会怎么介入？",
+                "如何用数据分析来提升新员工留存率？简单说说你的思路。"
+            ],
+            evalWeights: { logic: 0.25, profession: 0.4, adaptability: 0.2, communication: 0.15 }
+        },
+        dev: {
+            questions: [
+                "你最近在项目中遇到的最棘手的技术难题是什么？如何解决的？",
+                "代码可读性和极致性能之间你怎么取舍？举例说明。",
+                "如果产品经理提了一个需求，技术上实现成本极高但业务价值一般，你会怎么沟通？"
+            ],
+            evalWeights: { logic: 0.3, profession: 0.4, adaptability: 0.2, communication: 0.1 }
+        }
+    };
+
+    let currentJob = null;          // 'pm','hr','dev'
+    let currentStep = 0;           // 0:未开始, 1~3进行中, 4结束
+    let questionsList = [];
+    let userAnswers = [];           // 存储用户每次回答
+    let aiFeedbacks = [];           // 存储每次AI点评
+    let scoresPerAnswer = [];       // 每个问题的综合分数 (0-100单题)
+    let dimensionScores = { logic: 0, profession: 0, adaptability: 0, communication: 0 };
+    
+    // DOM 元素
+    const chatArea = document.getElementById('chatArea');
+    const answerInput = document.getElementById('answerInput');
+    const sendBtn = document.getElementById('sendBtn');
+    const startBtn = document.getElementById('startInterviewBtn');
+    const resetBtn = document.getElementById('resetInterviewBtn');
+    const reportCardDiv = document.getElementById('reportCard');
+    const selectedJobDisplay = document.getElementById('selectedJobDisplay');
+    const jobBtns = document.querySelectorAll('.job-btn');
+    
+    // 辅助函数
+    function addMessage(role, text, feedbackExtra = null) {
+        const msgDiv = document.createElement('div');
+        msgDiv.className = `message ${role}`;
+        const bubble = document.createElement('div');
+        bubble.className = 'bubble';
+        bubble.innerText = text;
+        msgDiv.appendChild(bubble);
+        if (feedbackExtra && role === 'ai') {
+            const small = document.createElement('div');
+            small.className = 'feedback';
+            small.innerText = feedbackExtra;
+            msgDiv.appendChild(small);
+        }
+        chatArea.appendChild(msgDiv);
+        chatArea.scrollTop = chatArea.scrollHeight;
+    }
+    
+    function clearChat(keepWelcome = true) {
+        chatArea.innerHTML = '';
+        if (keepWelcome) {
+            addMessage('ai', '👋 你好！我是你的AI面试官。请先在上方选择一个岗位，然后点击「开始面试」按钮，我会根据岗位问你3个专业问题～');
+        }
+    }
+    
+    // 模拟AI根据岗位+用户回答生成点评和打分 (0-100)
+    function simulateAIEvaluation(jobKey, questionIdx, userAnswer) {
+        // 基于回答长度、关键词丰富度给出粗略分数，再结合岗位类型调整
+        let baseScore = 60;
+        const len = userAnswer.trim().length;
+        if (len > 80) baseScore += 15;
+        else if (len > 30) baseScore += 8;
+        else if (len < 10) baseScore -= 20;
+        // 关键词加分 (业务/数据/同理心/代码等)
+        const keywords = {
+            pm: ['用户', '数据', '优先级', '迭代', '需求', 'mvp', '转化'],
+            hr: ['业务', '沟通', '共情', 'ai', '数据', '文化', '冲突'],
+            dev: ['算法', '性能', '重构', '测试', '架构', 'debug', '协作']
+        };
+        let kwList = keywords[jobKey] || [];
+        let matchCount = 0;
+        kwList.forEach(kw => {
+            if (userAnswer.toLowerCase().includes(kw.toLowerCase())) matchCount++;
+        });
+        baseScore += Math.min(20, matchCount * 5);
+        // 限制范围
+        let finalScore = Math.min(98, Math.max(28, baseScore));
+        // 生成点评文字
+        let comment = "";
+        if (finalScore >= 85) comment = "回答很出色，逻辑清晰有深度！";
+        else if (finalScore >= 70) comment = "不错，抓住了要点，再丰富一下细节会更棒。";
+        else if (finalScore >= 55) comment = "基本回答但缺乏亮点，建议结合具体案例。";
+        else comment = "回答略显单薄，需要更结构化思考。";
+        
+        // 为每个维度分配模拟分数 (用于雷达图)
+        let logic = 60 + (finalScore-60)*0.4 + (Math.random()*8-4);
+        let profession = 60 + (finalScore-60)*0.5 + (Math.random()*6-3);
+        let adaptability = 55 + (finalScore-55)*0.3 + (Math.random()*10-5);
+        let communication = 65 + (finalScore-65)*0.3 + (Math.random()*8-4);
+        // 边界限制
+        logic = Math.min(99, Math.max(30, logic));
+        profession = Math.min(99, Math.max(30, profession));
+        adaptability = Math.min(99, Math.max(30, adaptability));
+        communication = Math.min(99, Math.max(30, communication));
+        
+        return { score: finalScore, comment, dims: { logic, profession, adaptability, communication } };
+    }
+    
+    // 处理回答并推进面试
+    async function handleAnswer() {
+        if (!currentJob) {
+            addMessage('ai', '请先选择一个岗位再开始面试。');
+            return;
+        }
+        if (currentStep < 1 || currentStep > questionsList.length) return;
+        const answer = answerInput.value.trim();
+        if (!answer) {
+            addMessage('ai', '🤔 请写一点回答再提交吧，简短也可以～');
+            return;
+        }
+        // 记录用户回答
+        userAnswers.push(answer);
+        addMessage('user', answer);
+        answerInput.value = '';
+        sendBtn.disabled = true;
+        answerInput.disabled = true;
+        
+        // 模拟AI思考延迟
+        addMessage('ai', '🤖 AI面试官正在分析你的回答...');
+        await new Promise(r => setTimeout(r, 800));
+        // 删除"分析中"消息
+        chatArea.removeChild(chatArea.lastChild);
+        
+        // 评估当前问题
+        const currentQIdx = currentStep - 1;
+        const evalResult = simulateAIEvaluation(currentJob, currentQIdx, answer);
+        scoresPerAnswer.push(evalResult.score);
+        // 累加维度分数
+        dimensionScores.logic += evalResult.dims.logic;
+        dimensionScores.profession += evalResult.dims.profession;
+        dimensionScores.adaptability += evalResult.dims.adaptability;
+        dimensionScores.communication += evalResult.dims.communication;
+        
+        const feedbackMsg = `📝 点评：${evalResult.comment} (本题得分 ${evalResult.score})`;
+        aiFeedbacks.push(feedbackMsg);
+        addMessage('ai', `第${currentStep}题回答完毕。${feedbackMsg}`);
+        
+        // 判断是否结束
+        if (currentStep === questionsList.length) {
+            // 面试结束，生成报告
+            currentStep = 4; // 结束标识
+            sendBtn.disabled = true;
+            answerInput.disabled = true;
+            generateReport();
+        } else {
+            // 下一题
+            currentStep++;
+            const nextQuestion = questionsList[currentStep-1];
+            addMessage('ai', `🗣️ 第${currentStep}题：${nextQuestion}`);
+            sendBtn.disabled = false;
+            answerInput.disabled = false;
+            answerInput.focus();
+        }
+    }
+    
+    function generateReport() {
+        // 计算平均维度分 (每个维度除以3)
+        const avgLogic = dimensionScores.logic / 3;
+        const avgProf = dimensionScores.profession / 3;
+        const avgAdapt = dimensionScores.adaptability / 3;
+        const avgComm = dimensionScores.communication / 3;
+        const finalRadarData = [avgLogic, avgProf, avgAdapt, avgComm];
+        const totalAvgScore = scoresPerAnswer.reduce((a,b)=>a+b,0)/scoresPerAnswer.length;
+        
+        // 渲染报告卡片
+        const reportHtml = `
+            <div style="text-align: center; margin-bottom: 8px;">
+                <span style="font-size: 1.5rem;">${jobMap[currentJob].icon} ${jobMap[currentJob].name}</span>
+                <div style="font-size: 1.2rem; font-weight: bold; margin-top: 8px;">综合能力评分：${Math.round(totalAvgScore)}分</div>
+                <div style="font-size:0.85rem; color:#4b5563">${totalAvgScore>=75?'🌟 表现优秀，有潜力！':totalAvgScore>=60?'👍 不错，继续提升~':'📚 再加强实战与思考'}</div>
+            </div>
+            <div class="score-radar">
+                <canvas id="radarCanvas" width="300" height="300" style="width:100%; height:auto; max-width:280px; margin:0 auto; display:block;"></canvas>
+            </div>
+            <div style="background:#F3F4F6; border-radius: 20px; padding: 12px;">
+                <div style="font-weight:600;">📌 维度解析</div>
+                <div>🧠 逻辑表达: ${Math.round(avgLogic)}分 &nbsp;| 🎯 专业匹配: ${Math.round(avgProf)}分</div>
+                <div>⚡ 应变能力: ${Math.round(avgAdapt)}分 &nbsp;| 🗣️ 沟通技巧: ${Math.round(avgComm)}分</div>
+                <hr>
+                <div>💡 面试官建议：${totalAvgScore>=80?'多做实战项目，拓展行业视野。':totalAvgScore>=65?'回答时多引用STAR法则，量化成果。':'先梳理岗位核心能力，用真实案例打磨表达。'}</div>
+            </div>
+        `;
+        document.getElementById('reportContent').innerHTML = reportHtml;
+        reportCardDiv.style.display = 'block';
+        // 绘制雷达图
+        setTimeout(() => {
+            const ctx = document.getElementById('radarCanvas')?.getContext('2d');
+            if (ctx) {
+                new Chart(ctx, {
+                    type: 'radar',
+                    data: {
+                        labels: ['逻辑表达', '专业匹配', '应变能力', '沟通技巧'],
+                        datasets: [{
+                            label: '你的能力值',
+                            data: [avgLogic, avgProf, avgAdapt, avgComm],
+                            backgroundColor: 'rgba(0,102,204,0.2)',
+                            borderColor: '#0066CC',
+                            borderWidth: 2,
+                            pointBackgroundColor: '#0066CC',
+                            pointBorderColor: '#fff',
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        scales: { r: { beginAtZero: true, max: 100, ticks: { stepSize: 20 } } }
+                    }
+                });
+            }
+        }, 100);
+        
+        // 滑动到报告区域
+        reportCardDiv.scrollIntoView({ behavior: 'smooth' });
+    }
+    
+    // 开始面试流程
+    function startInterview() {
+        if (!currentJob) {
+            addMessage('ai', '⚠️ 请先点击上方任意岗位按钮选择面试类型~');
+            return;
+        }
+        if (currentStep === 4) {
+            // 若已完成，先重置再开始
+            resetInterview();
+        }
+        if (currentStep > 0 && currentStep <= 3) {
+            addMessage('ai', '⏳ 面试已在进行中，请继续回答当前问题。');
+            return;
+        }
+        // 初始化
+        clearChat(false);
+        currentStep = 1;
+        userAnswers = [];
+        aiFeedbacks = [];
+        scoresPerAnswer = [];
+        dimensionScores = { logic: 0, profession: 0, adaptability: 0, communication: 0 };
+        const bank = questionBank[currentJob];
+        questionsList = [...bank.questions];
+        addMessage('ai', `🎤 欢迎参加${jobMap[currentJob].icon} ${jobMap[currentJob].name} 岗位模拟面试，我将提问3个问题，请认真思考后回答。`);
+        addMessage('ai', `第1题：${questionsList[0]}`);
+        sendBtn.disabled = false;
+        answerInput.disabled = false;
+        answerInput.focus();
+        reportCardDiv.style.display = 'none';
+    }
+    
+    function resetInterview() {
+        currentStep = 0;
+        sendBtn.disabled = true;
+        answerInput.disabled = true;
+        clearChat(true);
+        reportCardDiv.style.display = 'none';
+        if(currentJob) {
+            selectedJobDisplay.innerText = `已选：${jobMap[currentJob].icon} ${jobMap[currentJob].name}，点击「开始面试」即可`;
+        } else {
+            selectedJobDisplay.innerText = `未选择，点击上方岗位开始面试`;
+        }
+    }
+    
+    // 岗位切换逻辑
+    jobBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const jobVal = btn.getAttribute('data-job');
+            if (currentStep > 0 && currentStep < 4) {
+                if(confirm('切换岗位会中断当前面试，确定吗？')) {
+                    currentJob = jobVal;
+                    resetInterview();
+                } else return;
+            } else {
+                currentJob = jobVal;
+                resetInterview();
+            }
+            jobBtns.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            selectedJobDisplay.innerText = `已选：${jobMap[currentJob].icon} ${jobMap[currentJob].name}，点击「开始面试」即可`;
+        });
+    });
+    
+    // 绑定按钮事件
+    startBtn.addEventListener('click', startInterview);
+    resetBtn.addEventListener('click', resetInterview);
+    sendBtn.addEventListener('click', handleAnswer);
+    answerInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter' && !sendBtn.disabled && answerInput.disabled === false) handleAnswer();
+    });
+    
+    // 分享卡片 (截图)
+    document.getElementById('shareImageBtn')?.addEventListener('click', async () => {
+        const reportElem = document.getElementById('reportContent');
+        if (!reportElem) return;
+        try {
+            const canvas = await html2canvas(reportElem, { scale: 2, backgroundColor: '#ffffff' });
+            const link = document.createElement('a');
+            link.download = `面试报告_${jobMap[currentJob]?.name || 'AI'}.png`;
+            link.href = canvas.toDataURL();
+            link.click();
+            addMessage('ai', '📸 截图已保存到本地，欢迎分享到鹅厂圈子~', '分享成功');
+        } catch(e) {
+            alert('截图生成失败，可手动截图');
+        }
+    });
+    
+    document.getElementById('newInterviewBtn')?.addEventListener('click', () => {
+        if(currentJob) resetInterview();
+        else resetInterview();
+    });
+    
+    // 初始重置界面
+    resetInterview();
+</script>
+</body>
+</html>
